@@ -1,3 +1,4 @@
+import 'package:chat_app/FriendListScreen.dart';
 import 'package:chat_app/ProfileScreen.dart';
 import 'package:chat_app/SearchScreen.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +16,7 @@ class MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   static const List<Widget> _widgetOptions = <Widget>[
-    Center(child: Text('Home')),
+    FriendListScreen(),
     ProfileEditScreen(),
   ];
 

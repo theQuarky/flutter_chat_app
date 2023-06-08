@@ -30,13 +30,31 @@ class MyApp extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const CircularProgressIndicator();
           } else {
-            if (snapshot.hasData) {
-              return const HomeScreen(
-                newUser: false,
-              );
-            } else {
-              return const AuthScreen();
-            }
+            final isLoggedIn = snapshot.hasData;
+            final initialRoute = isLoggedIn ? '/home' : '/auth';
+
+            return Navigator(
+              initialRoute: initialRoute,
+              onGenerateRoute: (RouteSettings settings) {
+                return MaterialPageRoute(
+                  builder: (BuildContext context) {
+                    switch (settings.name) {
+                      case '/home':
+                        return const HomeScreen(newUser: false);
+                      case '/auth':
+                        return const AuthScreen();
+                      default:
+                        // Handle unknown routes here, such as showing an error screen
+                        return const Scaffold(
+                          body: Center(
+                            child: Text('Unknown route'),
+                          ),
+                        );
+                    }
+                  },
+                );
+              },
+            );
           }
         },
       ),

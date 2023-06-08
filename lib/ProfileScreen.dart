@@ -5,8 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:path/path.dart' as Path;
-import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 enum Gender { male, female }
 
@@ -23,6 +22,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final TextEditingController _imageController = TextEditingController();
   final TextEditingController _dobController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ImagePicker _picker = ImagePicker();
+  File? _selectedImage;
 
   Gender _gender = Gender.male;
 
@@ -54,31 +55,29 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     super.dispose();
   }
 
-  Future<String> uploadImageFromBlobUrl(String imageUrl) async {
-    // Fetch the image data from the blob URL
-    final response = await http.get(Uri.parse(imageUrl));
-    final bytes = response.bodyBytes;
-
-    // Generate a unique file name
-    String? uid = FirebaseAuth.instance.currentUser?.uid;
-    Reference storageReference = FirebaseStorage.instance
-        .ref()
-        .child('profilePictures/$uid/picture.jpg');
-    UploadTask uploadTask = storageReference.putData(bytes);
-    TaskSnapshot taskSnapshot = await uploadTask;
-    String downloadUrl = await taskSnapshot.ref.getDownloadURL();
-    setState(() {
-      _imageController.text = downloadUrl;
-    });
-    return downloadUrl;
+  Future<String?> uploadImage(File imageFile) async {
+    try {
+      final fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      final reference = FirebaseStorage.instance.ref().child(fileName);
+      await reference.putFile(imageFile);
+      final imageUrl = await reference.getDownloadURL();
+      _imageController.text = imageUrl;
+      return imageUrl;
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
   }
 
   void _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       // File imageFile = File(_imageController.text);
-      String imageUrl = await uploadImageFromBlobUrl(_imageController.text);
+      String? imageUrl;
+      if (_selectedImage != null) {
+        imageUrl = await uploadImage(_selectedImage!);
+      }
+
       final String displayName = _displayNameController.text.trim();
-      final String image = _imageController.text.trim();
       final String gender = _gender.name;
       final String dob = _dobController.text.trim();
       CollectionReference usersCollection = _firestore.collection('users');
@@ -86,14 +85,24 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 // Create a new document with the user's UID as the document ID
       DocumentReference newUserRef =
           usersCollection.doc(FirebaseAuth.instance.currentUser?.uid);
+      dynamic data;
 
+      if (imageUrl != null) {
+        data = {
+          'displayName': displayName,
+          'image': imageUrl,
+          'gender': gender,
+          'dob': dob,
+        };
+      } else {
+        data = {
+          'displayName': displayName,
+          'gender': gender,
+          'dob': dob,
+        };
+      }
 // Set the data for the document
-      newUserRef.set({
-        'displayName': displayName,
-        'image': imageUrl,
-        'gender': gender,
-        'dob': dob,
-      }).then((_) {
+      newUserRef.update(data).then((_) {
         // Document successfully added to Firestore
         print('User data saved to Firestore');
         getProfile();
@@ -104,20 +113,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? pickedImage =
-        await _picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedImage != null) {
-      setState(() {
-        _imageController.text = pickedImage.path;
-      });
-    }
+  pickImage() async {
+    final image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return null;
+    setState(() {
+      _selectedImage = File(image.path);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final imgPath = _selectedImage?.path;
+    print('IMAGE PATH: $imgPath');
+
     return Scaffold(
       body: Container(
         color: Colors.white,
@@ -140,43 +148,39 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   children: [
                     Center(
                       child: Container(
-                        child: _imageController.text.isNotEmpty
-                            ? Image.network(
-                                _imageController.text,
-                                loadingBuilder: (BuildContext context,
-                                    Widget child,
-                                    ImageChunkEvent? loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value:
-                                          loadingProgress.expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  loadingProgress
-                                                      .expectedTotalBytes!
-                                              : null,
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (BuildContext context,
-                                    Object exception, StackTrace? stackTrace) {
-                                  print(exception);
-                                  return const Text('Failed to load image');
-                                },
-                              )
-                            : ElevatedButton(
-                                onPressed: _pickImage,
-                                child: const Icon(Icons.camera_alt),
-                              ),
+                        width: 100, // Adjust the size of the circle as needed
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.blue, width: 2),
+                        ),
+                        child: ClipOval(
+                          child: _imageController.text.isNotEmpty ||
+                                  _selectedImage != null
+                              ? (_selectedImage == null
+                                  ? Image(
+                                      image:
+                                          NetworkImage(_imageController.text),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      _selectedImage!,
+                                      fit: BoxFit.cover,
+                                    ))
+                              : ElevatedButton(
+                                  onPressed: pickImage,
+                                  child: const Icon(Icons.camera_alt),
+                                ),
+                        ),
                       ),
                     ),
-                    if (_imageController.text.isNotEmpty)
+                    if (_imageController.text.isNotEmpty ||
+                        _selectedImage != null)
                       IconButton(
                         icon: const Icon(Icons.cancel, color: Colors.red),
                         onPressed: () {
                           setState(() {
+                            _selectedImage = null;
                             _imageController.text = '';
                           });
                         },

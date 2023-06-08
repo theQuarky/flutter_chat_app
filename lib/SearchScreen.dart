@@ -40,6 +40,7 @@ class _SearchScreenState extends State<SearchScreen>
       });
     } else {
       if (data != null) {
+        _subscription?.cancel();
         String chatId = data['active'][0];
 
         final userDocumentRef = _firestore.collection('tempChats');
@@ -63,13 +64,15 @@ class _SearchScreenState extends State<SearchScreen>
           'active': FieldValue.arrayRemove([chatId]),
         });
         CollectionReference tempChat = _firestore.collection('tempChats');
-        tempChat.add({'partyA': chatId, 'partyB': uid}).then(
-            (value) => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TempChatScreen(),
-                  ),
-                ));
+        tempChat.add({'partyA': chatId, 'partyB': uid}).then((value) async {
+          print('Searching User');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TempChatScreen(),
+            ),
+          );
+        });
       }
     }
   }
@@ -87,7 +90,9 @@ class _SearchScreenState extends State<SearchScreen>
         final searchQueueData = snapshot.data();
         if (searchQueueData != null &&
             !(searchQueueData['active'] as List).contains(uid)) {
-          Navigator.pushReplacement(
+          _subscription?.cancel();
+          print('User picked');
+          Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const TempChatScreen(),
