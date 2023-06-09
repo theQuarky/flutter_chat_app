@@ -14,19 +14,9 @@ class _FriendListScreenState extends State<FriendListScreen> {
   User? user = FirebaseAuth.instance.currentUser;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  void getFriendList() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    DocumentReference ref = _firestore.collection('users').doc(uid);
-    DocumentSnapshot snapshot = await ref.get();
-    Map<String, dynamic> data = (snapshot.data() ?? {}) as Map<String, dynamic>;
-
-    print(data);
-  }
-
   @override
   void initState() {
     super.initState();
-    getFriendList();
   }
 
   @override

@@ -1,6 +1,13 @@
+import 'dart:convert';
+
+import 'package:chat_app/ProfileScreen.dart';
+import 'package:chat_app/SearchScreen.dart';
+import 'package:chat_app/TempChatScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'AuthScreen.dart';
 import 'HomeScreen.dart';
 import 'firebase_options.dart';
@@ -10,6 +17,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   runApp(const MyApp());
 }
 
@@ -43,13 +51,14 @@ class MyApp extends StatelessWidget {
                         return const HomeScreen(newUser: false);
                       case '/auth':
                         return const AuthScreen();
+                      case '/search':
+                        return const SearchScreen();
+                      case '/profile':
+                        return const ProfileEditScreen();
+                      case '/tempChat':
+                        return const TempChatScreen();
                       default:
-                        // Handle unknown routes here, such as showing an error screen
-                        return const Scaffold(
-                          body: Center(
-                            child: Text('Unknown route'),
-                          ),
-                        );
+                        return const HomeScreen(newUser: false);
                     }
                   },
                 );

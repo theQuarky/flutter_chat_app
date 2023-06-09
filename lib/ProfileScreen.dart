@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -34,9 +35,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     setState(() {
       _gender = data['gender'] == 'male' ? Gender.male : Gender.female;
-      _displayNameController.text = data['displayName'];
-      _imageController.text = data['image'];
-      _dobController.text = data['dob'];
+      _displayNameController.text = data['displayName'] ?? '';
+      _imageController.text = data['image'] ?? '';
+      _dobController.text = data['dob'] ?? '';
     });
   }
 
@@ -85,6 +86,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 // Create a new document with the user's UID as the document ID
       DocumentReference newUserRef =
           usersCollection.doc(FirebaseAuth.instance.currentUser?.uid);
+
+      DocumentSnapshot f = await newUserRef.get();
       dynamic data;
 
       if (imageUrl != null) {
@@ -101,15 +104,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           'dob': dob,
         };
       }
-// Set the data for the document
-      newUserRef.update(data).then((_) {
-        // Document successfully added to Firestore
-        print('User data saved to Firestore');
-        getProfile();
-      }).catchError((error) {
-        // Error occurred while saving document to Firestore
-        print('Failed to save user data: $error');
-      });
+      if (f.data() != null) {
+        newUserRef.update(data).then((_) {
+          // Document successfully added to Firestore
+          print('User data saved to Firestore');
+          getProfile();
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Profile Updated!')));
+        }).catchError((error) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Error Occur while saving your profile')));
+          print('Failed to save user data: $error');
+        });
+      } else {
+        newUserRef.set(data).then((_) {
+          print("User saved!");
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Profile Saved!')));
+          Navigator.pushNamed(context, '/home');
+        }).catchError((error) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Error Occur while saving your profile')));
+          print("Failed to save user: $error");
+        });
+      }
     }
   }
 
@@ -123,9 +141,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final imgPath = _selectedImage?.path;
-    print('IMAGE PATH: $imgPath');
-
     return Scaffold(
       body: Container(
         color: Colors.white,
@@ -261,7 +276,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   height: 20,
                 ),
                 ElevatedButton(
-                    onPressed: FirebaseAuth.instance.signOut,
+                    onPressed: () {
+                      FirebaseAuth.instance.signOut();
+                      Navigator.pushNamed(context, '/auth');
+                    },
                     child: const Text('Logout'))
               ],
             ),

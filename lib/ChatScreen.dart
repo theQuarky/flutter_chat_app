@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'TempChatScreen.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final user = FirebaseAuth.instance.currentUser;
   final TextEditingController _messageController = TextEditingController();
+  ScrollController _scrollController = ScrollController();
   Map<String, dynamic>? partner = {};
   void sendMessage() async {
     final text = _messageController.text.trim();
@@ -97,7 +99,6 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    print(widget.partnerId);
     getPartnerData();
     findChatDoc();
   }
@@ -109,7 +110,7 @@ class _ChatScreenState extends State<ChatScreen> {
         child: CircularProgressIndicator(),
       );
     }
-    print(chatDocId);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(partner!['displayName'] ?? 'User'),
@@ -124,12 +125,16 @@ class _ChatScreenState extends State<ChatScreen> {
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   final data = snapshot.data?.data();
-                  final chats = data?['chats']?.cast<Map<String, dynamic>>();
+                  List<dynamic> chats = List.of(data?['chats']);
+                  chats.sort((a, b) {
+                    return b['time'] - a['time'];
+                  });
 
                   return ListView.builder(
-                    itemCount: chats?.length ?? 0,
+                    reverse: true,
+                    itemCount: chats.length,
                     itemBuilder: (context, index) {
-                      final chat = chats?[index];
+                      final chat = chats[index];
                       final sender = chat?['sender'];
                       final text = chat?['text'];
                       final time = chat?['time'];

@@ -1,7 +1,4 @@
 import 'dart:async';
-
-import 'package:chat_app/MainScreen.dart';
-import 'package:chat_app/TempChatScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -65,13 +62,7 @@ class _SearchScreenState extends State<SearchScreen>
         });
         CollectionReference tempChat = _firestore.collection('tempChats');
         tempChat.add({'partyA': chatId, 'partyB': uid}).then((value) async {
-          print('Searching User');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const TempChatScreen(),
-            ),
-          );
+          Navigator.pushNamed(context, '/tempChat');
         });
       }
     }
@@ -91,13 +82,7 @@ class _SearchScreenState extends State<SearchScreen>
         if (searchQueueData != null &&
             !(searchQueueData['active'] as List).contains(uid)) {
           _subscription?.cancel();
-          print('User picked');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const TempChatScreen(),
-            ),
-          );
+          Navigator.pushNamed(context, '/tempChat');
         }
       });
     } catch (e) {
@@ -190,10 +175,9 @@ class _SearchScreenState extends State<SearchScreen>
               _subscription?.cancel();
               documentRef.update({
                 'active': FieldValue.arrayRemove([uid]),
+              }).then((value) {
+                Navigator.pushNamed(context, '/home');
               });
-              // ignore: use_build_context_synchronously
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => const MainScreen()));
             },
             child: const Text('Exit'),
           )

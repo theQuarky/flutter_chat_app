@@ -1,8 +1,11 @@
 import 'package:chat_app/FriendListScreen.dart';
 import 'package:chat_app/ProfileScreen.dart';
 import 'package:chat_app/SearchScreen.dart';
+import 'package:chat_app/services/notification.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'AuthScreen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -14,6 +17,7 @@ class MainScreen extends StatefulWidget {
 
 class MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static const List<Widget> _widgetOptions = <Widget>[
     FriendListScreen(),
@@ -26,11 +30,26 @@ class MainScreenState extends State<MainScreen> {
     });
   }
 
+  void updateDeviceToken() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    String? deviceToken = await messaging.getToken();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final userDoc = _firestore.collection('users').doc(uid);
+    await userDoc.update({'deviceToken': deviceToken});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    updateDeviceToken();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
+        leading: const Text(''),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
