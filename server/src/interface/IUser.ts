@@ -1,8 +1,14 @@
+enum Gender {
+  male,
+  female,
+}
+
 export default interface IUser {
-  _id?: any;
-  FirstName?: string;
-  LastName?: string;
-  email?: string;
-  DOB?: string;
-  Bio?: string;
+  uid?: string;
+  displayName?: string;
+  dob?: string;
+  gender?: Gender;
+  image?: string;
+  friends?: string[];
+  deviceToken?: string;
 }

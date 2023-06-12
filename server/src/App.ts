@@ -3,7 +3,6 @@ import * as cors from "cors";
 import * as express from "express";
 import apiV1 from "./api/index";
 import * as errorHandler from "./helpers/errorHandler";
-const boom = require("express-boom");
 import IRequest from "./interface/IRequest";
 import IResponse from "./interface/IResponse";
 import { NextFunction } from "express";
@@ -26,7 +25,6 @@ class App {
     this.express.use(bodyParser.urlencoded({ extended: false }));
     this.express.use("/static", express.static("uploads"));
     this.express.use(cors());
-    this.express.use(boom());
     this.express.use((req: IRequest, res: IResponse, next: NextFunction) => {
       const params = _.merge(req.body, req.params);
       console.table(params);

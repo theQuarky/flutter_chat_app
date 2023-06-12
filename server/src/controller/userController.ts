@@ -18,8 +18,11 @@ export const getUsers: RequestHandler = async (
   next: NextFunction
 ) => {
   res.send({
-    user: req.users,
+    user: "req.users",
   });
+  // res.send({
+  //   user: req.users,
+  // });
 };
 
 export const deleteUsers: RequestHandler = async (
