@@ -3,14 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "npx nodemon ./dist/index.js",
-    "dev": "npx nodemon --exec ts-node -- ./src/index.ts",
-    "prod": "npm run build && npm run start",
-    "clean": "rm -rf node_modules coverage dist .nyc_output",
-    "postinstall": "npm run build"
-  },
+"scripts": {
+  "build": "tsc",
+  "start": "node ./dist/index.js",
+  "dev": "nodemon ./dist/index.js",
+  "prod": "npm run build && npm run start",
+  "clean": "rm -rf node_modules coverage dist .nyc_output"
+},
   "keywords": [],
   "author": "Hiren Rana",
   "license": "ISC",
