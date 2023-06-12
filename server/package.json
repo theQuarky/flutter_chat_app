@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
-  "build": "tsc",
-  "start": "node ./dist/index.js",
-  "dev": "nodemon ./dist/index.js",
-  "prod": "npm run build && npm run start",
-  "clean": "rm -rf node_modules coverage dist .nyc_output"
-},
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/index.js",
+    "dev": "nodemon ./dist/index.js",
+    "prod": "npm run build && npm run start",
+    "clean": "rm -rf node_modules coverage dist .nyc_output"
+  },
   "keywords": [],
   "author": "Hiren Rana",
   "license": "ISC",
@@ -19,7 +19,8 @@
     "express": "^4.18.2",
     "firebase-admin": "^11.9.0",
     "http-status": "^1.6.2",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "tsc": "^2.0.4"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",
