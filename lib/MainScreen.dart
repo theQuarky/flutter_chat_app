@@ -1,7 +1,6 @@
 import 'package:chat_app/FriendListScreen.dart';
 import 'package:chat_app/ProfileScreen.dart';
 import 'package:chat_app/SearchScreen.dart';
-import 'package:chat_app/services/notification.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,6 +16,7 @@ class MainScreen extends StatefulWidget {
 
 class MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static const List<Widget> _widgetOptions = <Widget>[
@@ -38,6 +38,21 @@ class MainScreenState extends State<MainScreen> {
     await userDoc.update({'deviceToken': deviceToken});
   }
 
+  void getMessage() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print(message);
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print(message);
+    });
+
+    FirebaseMessaging.onBackgroundMessage((message) {
+      print(message);
+      throw "hello";
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,22 +62,6 @@ class MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        leading: const Text(''),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              FirebaseAuth.instance.signOut();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const AuthScreen()),
-              );
-            },
-          )
-        ],
-      ),
       body: _widgetOptions.elementAt(_selectedIndex),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

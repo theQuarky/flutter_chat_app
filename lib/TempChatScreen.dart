@@ -82,8 +82,6 @@ class _TempChatScreenState extends State<TempChatScreen> {
         setUsers();
         return;
       }
-
-      print('No User Found!!');
     } catch (e) {
       print('TempChatScreen $e');
     }
@@ -129,12 +127,44 @@ class _TempChatScreenState extends State<TempChatScreen> {
     }
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final userDoc = _firestore.collection('users').doc(uid);
-    await userDoc.update({
-      'friends': FieldValue.arrayUnion([partner?['uid']]),
-    }).then((value) {
-      Navigator.pushNamed(context, '/home');
-    });
+
+// Get the user document reference
+    final userDocRef = _firestore.collection('users').doc(uid);
+    final userDocSnapshot = await userDocRef.get();
+
+// Retrieve the current friends array
+    final friends = userDocSnapshot.data()?['friends'] ?? [];
+
+// Check if the friend already exists in the friends array
+    final friendExists =
+        friends.any((friend) => friend['uid'] == partner!['uid']);
+
+    if (!friendExists) {
+      cleanTempChats();
+
+      // Friend does not exist, add the friend to the friends array
+      final friend = {
+        'uid': partner!['uid'],
+        'lastMessage': {'time': DateTime.now()}
+      };
+
+      await userDocRef.update({
+        'friends': FieldValue.arrayUnion([friend])
+      }).then((value) async {
+        Navigator.pushNamed(context, '/home');
+      });
+    }
+  }
+
+  void cleanTempChats() async {
+    await _firestore.collection('tempChats').doc(tempChatDocId).delete();
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    cleanTempChats();
   }
 
   @override
@@ -155,8 +185,10 @@ class _TempChatScreenState extends State<TempChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(partner?['displayName'] ?? ''),
-        leading:
-            BackButton(onPressed: () => Navigator.pushNamed(context, "/home")),
+        leading: BackButton(onPressed: () {
+          cleanTempChats();
+          Navigator.pushNamed(context, "/home");
+        }),
         actions: [
           ElevatedButton(
             onPressed: !meAddedFriend
@@ -200,7 +232,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
                   final data = snapshot.data?.data();
                   final chats = data?['chats']?.cast<Map<String, dynamic>>();
 
-                  if (data!['isFriend'] != null) {
+                  if (data != null && data['isFriend'] != null) {
                     List isFriend = data['isFriend'] as List;
 
                     if (isFriend.contains(user!['uid']) &&
@@ -209,17 +241,25 @@ class _TempChatScreenState extends State<TempChatScreen> {
                       addFriend(isPermanent: true);
                       return Center(
                         child: Text(
-                            'You both are friends now!! You can check $name on your home page'),
+                          'You both are friends now!! You can check $name on your home page',
+                        ),
                       );
                     }
                   }
+
+                  if (chats == null || chats.isEmpty) {
+                    return const Center(
+                      child: Text('No chat found!'),
+                    );
+                  }
+
                   return ListView.builder(
-                    itemCount: chats?.length ?? 0,
+                    itemCount: chats.length,
                     itemBuilder: (context, index) {
-                      final chat = chats?[index];
-                      final sender = chat?['sender'];
-                      final text = chat?['text'];
-                      final time = chat?['time'];
+                      final chat = chats[index];
+                      final sender = chat['sender'];
+                      final text = chat['text'];
+                      final time = chat['time'];
 
                       // Format timestamp to a more readable format
                       final formattedTime = DateFormat('HH:mm').format(
@@ -231,9 +271,10 @@ class _TempChatScreenState extends State<TempChatScreen> {
                           sender == FirebaseAuth.instance.currentUser?.uid;
 
                       return ChatBubble(
-                          isUserMessage: isUserMessage,
-                          text: text,
-                          formattedTime: formattedTime);
+                        isUserMessage: isUserMessage,
+                        text: text,
+                        formattedTime: formattedTime,
+                      );
                     },
                   );
                 } else if (snapshot.connectionState ==

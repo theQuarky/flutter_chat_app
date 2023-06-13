@@ -18,32 +18,35 @@ class _SearchScreenState extends State<SearchScreen>
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _subscription;
 
   void addToSearchQueue() async {
-    String? uid = FirebaseAuth.instance.currentUser?.uid;
-    DocumentReference<Map<String, dynamic>> documentRef =
-        _firestore.collection('users').doc(uid ?? '');
-    DocumentSnapshot<Map<String, dynamic>> snapshot = await documentRef.get();
-    Map<String, dynamic> user = snapshot.data() ?? {};
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final userDocumentRef = _firestore.collection('users').doc(uid ?? '');
+    final userSnapshot = await userDocumentRef.get();
+    final userData = userSnapshot.data() as Map<String, dynamic>?;
 
-    documentRef = _firestore
-        .collection('searchQueue')
-        .doc(user['gender'] == 'male' ? 'female' : 'male');
-    snapshot = await documentRef.get();
-    Map<String, dynamic>? data = snapshot.data();
+    if (userData != null) {
+      final gender = userData['gender'];
+      final oppositeGender = gender == 'male' ? 'female' : 'male';
 
-    if (data != null && (data['active'] as List<dynamic>).isEmpty) {
-      documentRef = _firestore.collection('searchQueue').doc(user['gender']);
-      documentRef.update({
-        'active': FieldValue.arrayUnion([uid]),
-      });
-    } else {
-      if (data != null) {
-        _subscription?.cancel();
-        String chatId = data['active'][0];
+      final oppositeQueueRef =
+          _firestore.collection('searchQueue').doc(oppositeGender);
+      final oppositeQueueSnapshot = await oppositeQueueRef.get();
+      final oppositeQueueData = oppositeQueueSnapshot.data();
 
-        final userDocumentRef = _firestore.collection('tempChats');
+      if (oppositeQueueData != null &&
+          (oppositeQueueData['active'] as List).isEmpty) {
+        final currentQueueRef =
+            _firestore.collection('searchQueue').doc(gender);
+        currentQueueRef.update({
+          'active': FieldValue.arrayUnion([uid])
+        });
+        listenPicker();
+      } else if (oppositeQueueData != null) {
+        final chatId = oppositeQueueData['active'][0] as String;
 
-        final queryA = userDocumentRef.where('partyA', isEqualTo: chatId);
-        final queryB = userDocumentRef.where('partyB', isEqualTo: chatId);
+        final tempChatsRef = _firestore.collection('tempChats');
+
+        final queryA = tempChatsRef.where('partyA', isEqualTo: chatId);
+        final queryB = tempChatsRef.where('partyB', isEqualTo: chatId);
 
         final snapshotA = await queryA.get();
         final snapshotB = await queryB.get();
@@ -57,44 +60,62 @@ class _SearchScreenState extends State<SearchScreen>
         }
 
         await batch.commit();
-        await documentRef.set({
-          'active': FieldValue.arrayRemove([chatId]),
+        await oppositeQueueRef.update({
+          'active': FieldValue.arrayRemove([chatId])
         });
-        CollectionReference tempChat = _firestore.collection('tempChats');
-        tempChat.add({'partyA': chatId, 'partyB': uid}).then((value) async {
-          Navigator.pushNamed(context, '/tempChat');
-        });
+
+        final tempChatRef = _firestore.collection('tempChats');
+        await tempChatRef.add({'partyA': chatId, 'partyB': uid});
+        Navigator.pushNamed(context, '/tempChat');
       }
     }
   }
 
   void listenPicker() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final userDocumentRef = _firestore.collection('users').doc(uid ?? '');
-    try {
-      final userSnapshot = await userDocumentRef.get();
-      final user = userSnapshot.data() ?? {};
-      final queueDocumentRef =
-          _firestore.collection('searchQueue').doc(user['gender']);
+    if (uid == null) return;
 
-      _subscription = queueDocumentRef.snapshots().listen((snapshot) {
-        final searchQueueData = snapshot.data();
+    final tempChatsRef = _firestore.collection('tempChats');
+    final tempChatSnapshotA =
+        await tempChatsRef.where('partyA', isEqualTo: uid).get();
+    final tempChatSnapshotB =
+        await tempChatsRef.where('partyB', isEqualTo: uid).get();
+
+    if (tempChatSnapshotA.size > 0 || tempChatSnapshotB.size > 0) {
+      Navigator.pushNamed(context, '/tempChat');
+      return;
+    }
+
+    final userDocumentRef = _firestore.collection('users').doc(uid);
+    final userSnapshot = await userDocumentRef.get();
+    final userData = userSnapshot.data() as Map<String, dynamic>?;
+
+    if (userData != null) {
+      final gender = userData['gender'];
+      final queueDocumentRef = _firestore.collection('searchQueue').doc(gender);
+
+      _subscription = queueDocumentRef.snapshots().listen((snapshot) async {
+        final searchQueueData = snapshot.data() as Map<String, dynamic>?;
         if (searchQueueData != null &&
             !(searchQueueData['active'] as List).contains(uid)) {
-          _subscription?.cancel();
-          Navigator.pushNamed(context, '/tempChat');
+          final partyAQuery = tempChatsRef.where('partyA', isEqualTo: uid);
+          final partyBQuery = tempChatsRef.where('partyB', isEqualTo: uid);
+
+          final partyASnapshot = await partyAQuery.get();
+          final partyBSnapshot = await partyBQuery.get();
+
+          if (partyASnapshot.size > 0 || partyBSnapshot.size > 0) {
+            _subscription?.cancel();
+            Navigator.pushNamed(context, '/tempChat');
+          }
         }
       });
-    } catch (e) {
-      print('Error: $e');
-      // Handle the error appropriately
     }
   }
 
   @override
   void initState() {
     addToSearchQueue();
-    listenPicker();
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),

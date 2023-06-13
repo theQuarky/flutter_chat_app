@@ -1,8 +1,10 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'TempChatScreen.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -13,13 +15,22 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
+final List<String> conversationSuggestions = [
+  "Hey, how's it going?",
+  "What are your hobbies?",
+  "Tell me about your favorite movie.",
+  "Have you been to any interesting places recently?",
+  "What's your favorite book?",
+];
+
 class _ChatScreenState extends State<ChatScreen> {
   String chatDocId = '';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final user = FirebaseAuth.instance.currentUser;
   final TextEditingController _messageController = TextEditingController();
-  ScrollController _scrollController = ScrollController();
+  final functions = FirebaseFunctions.instance;
   Map<String, dynamic>? partner = {};
+
   void sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) {
@@ -35,6 +46,47 @@ class _ChatScreenState extends State<ChatScreen> {
       'chats': FieldValue.arrayUnion([chat]),
     });
     _messageController.clear();
+
+    DocumentSnapshot<Map<String, dynamic>> partnerSnapshot =
+        await _firestore.collection('users').doc(widget.partnerId).get();
+
+    if (partnerSnapshot.exists) {
+      final text = _messageController.text.trim();
+
+      final data = partnerSnapshot.data();
+      List<dynamic> friends = data!['friends'] as List;
+      final updatedFriends = friends.map((friend) {
+        if (friend['uid'] == uid) {
+          friend = {
+            'uid': widget.partnerId,
+            'lastMessage': {
+              'by': uid,
+              'text': text,
+              'time': DateTime.now(),
+            }
+          };
+          return friend;
+        }
+        return friend;
+      }).toList();
+      print('Partner Data: $partner , ');
+      _firestore
+          .collection('users')
+          .doc(widget.partnerId)
+          .update({'friends': updatedFriends});
+    }
+
+    final callable = functions.httpsCallable('sendNotification');
+    callable
+        .call(<String, dynamic>{
+          'token': partner!['deviceToken'],
+          'title': partner!['displayName'],
+          'body': text,
+        })
+        .then((value) async {})
+        .catchError((err) {
+          print(err);
+        });
   }
 
   void getPartnerData() async {
@@ -101,6 +153,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     getPartnerData();
     findChatDoc();
+    // makeLastMessageSeen();
   }
 
   @override
@@ -114,8 +167,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(partner!['displayName'] ?? 'User'),
-        leading:
-            BackButton(onPressed: () => Navigator.pushNamed(context, "/home")),
+        leading: BackButton(onPressed: () => Navigator.pop(context)),
       ),
       body: Column(
         children: [
@@ -125,35 +177,53 @@ class _ChatScreenState extends State<ChatScreen> {
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   final data = snapshot.data?.data();
-                  List<dynamic> chats = List.of(data?['chats']);
-                  chats.sort((a, b) {
-                    return b['time'] - a['time'];
-                  });
+                  final chats =
+                      List<Map<String, dynamic>>.from(data?['chats'] ?? []);
 
-                  return ListView.builder(
-                    reverse: true,
-                    itemCount: chats.length,
-                    itemBuilder: (context, index) {
-                      final chat = chats[index];
-                      final sender = chat?['sender'];
-                      final text = chat?['text'];
-                      final time = chat?['time'];
+                  if (chats.isNotEmpty) {
+                    chats.sort((a, b) {
+                      return b['time'] - a['time'];
+                    });
 
-                      // Format timestamp to a more readable format
-                      final formattedTime = DateFormat('HH:mm').format(
-                        DateTime.fromMillisecondsSinceEpoch(time),
-                      );
+                    return ListView.builder(
+                      reverse: true,
+                      itemCount: chats.length,
+                      itemBuilder: (context, index) {
+                        final chat = chats[index];
+                        final sender = chat['sender'];
+                        final text = chat['text'];
+                        final time = chat['time'];
 
-                      // Determine if the message is sent by the user or the partner
-                      final isUserMessage =
-                          sender == FirebaseAuth.instance.currentUser?.uid;
+                        // Format timestamp to a more readable format
+                        final formattedTime = DateFormat('HH:mm').format(
+                          DateTime.fromMillisecondsSinceEpoch(time),
+                        );
 
-                      return ChatBubble(
+                        // Determine if the message is sent by the user or the partner
+                        final isUserMessage =
+                            sender == FirebaseAuth.instance.currentUser?.uid;
+
+                        return ChatBubble(
                           isUserMessage: isUserMessage,
                           text: text,
-                          formattedTime: formattedTime);
-                    },
-                  );
+                          formattedTime: formattedTime,
+                        );
+                      },
+                    );
+                  } else {
+                    final random = Random();
+                    final randomSuggestion = conversationSuggestions[
+                        random.nextInt(conversationSuggestions.length)];
+
+                    return Center(
+                      child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Ask them something!'),
+                            Text(randomSuggestion)
+                          ]),
+                    );
+                  }
                 } else if (snapshot.connectionState ==
                     ConnectionState.waiting) {
                   return const Center(

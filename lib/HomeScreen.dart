@@ -1,4 +1,5 @@
 import 'package:chat_app/ProfileScreen.dart';
+import 'package:chat_app/services/userService.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,8 +7,7 @@ import 'AuthScreen.dart';
 import 'MainScreen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final bool newUser;
-  const HomeScreen({Key? key, required this.newUser}) : super(key: key);
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -15,36 +15,30 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   User? user = FirebaseAuth.instance.currentUser;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  late bool newUserCheck = true;
+  late bool newUserCheck = false;
 
-  Future<bool> isNewUser() async {
-    DocumentReference<Map<String, dynamic>> documentRef = _firestore
-        .collection('users')
-        .doc(FirebaseAuth.instance.currentUser?.uid ?? '');
-
+  void isNewUser() async {
     try {
-      DocumentSnapshot<Map<String, dynamic>> snapshot = await documentRef.get();
-      return snapshot.exists;
-    } catch (error) {
-      print('Error checking user existence: $error');
-      return true; // Consider it a new user to be safe
-    }
+      final user =
+          await getUserDataByUID(FirebaseAuth.instance.currentUser?.uid);
+      print("USER DATA: $user");
+      if (user != null) {
+        setState(() {
+          newUserCheck = true;
+        });
+      }
+    } catch (e) {}
   }
 
   @override
   void initState() {
     super.initState();
-    isNewUser().then((isNew) {
-      setState(() {
-        newUserCheck = isNew;
-      });
-    });
+    isNewUser();
   }
 
   void logout() {
     setState(() {
-      newUserCheck = false;
+      newUserCheck = true;
     });
     FirebaseAuth.instance.signOut();
     Navigator.pushReplacement(

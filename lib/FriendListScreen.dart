@@ -15,11 +15,6 @@ class _FriendListScreenState extends State<FriendListScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 10.0),
@@ -36,11 +31,19 @@ class _FriendListScreenState extends State<FriendListScreen> {
             );
           } else if (snapshot.hasData) {
             final data = snapshot.data?.data() as Map<String, dynamic>;
-            final friendList = data['friends'] ?? [];
+            List<dynamic> friendList = data['friends'] ?? [];
+            friendList.sort((a, b) {
+              final aTime = (a['lastMessage'] as Timestamp).toDate();
+              final bTime = (b['lastMessage'] as Timestamp).toDate();
+              return bTime.compareTo(aTime); // Sort in descending order
+            });
+
+            print(friendList);
+
             return ListView.builder(
               itemCount: friendList.length,
               itemBuilder: (context, index) {
-                final friendId = friendList[index];
+                final friendId = friendList[index]['uid'];
                 return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                   future: _firestore.collection('users').doc(friendId).get(),
                   builder: (context, snapshot) {
@@ -60,11 +63,12 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
                       return GestureDetector(
                         onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ChatScreen(partnerId: friendId),
-                            )),
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ChatScreen(partnerId: friendId),
+                          ),
+                        ),
                         child: ListTile(
                           leading: Image.network(
                             avatar,

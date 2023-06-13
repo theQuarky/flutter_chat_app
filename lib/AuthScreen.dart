@@ -13,7 +13,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passController = TextEditingController();
-  User? user = FirebaseAuth.instance.currentUser;
+  User? user;
 
   @override
   void dispose() {
@@ -55,20 +55,15 @@ class _AuthScreenState extends State<AuthScreen> {
       try {
         final email = emailController.text.trim();
         final password = passController.text.trim();
-        final UserCredential userCredential = await FirebaseAuth.instance
+        UserCredential userCredential = await FirebaseAuth.instance
             .signInWithEmailAndPassword(email: email, password: password);
         // Authentication successful
-        print('User authenticated: ${userCredential.user?.email}');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) => const HomeScreen(newUser: false)),
-        );
         setState(() {
           user = userCredential.user;
         });
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => HomeScreen()));
       } catch (e) {
-        // Authentication failed
         if (e is FirebaseAuthException && e.code == 'user-not-found') {
           try {
             final email = emailController.text.trim();
@@ -85,14 +80,13 @@ class _AuthScreenState extends State<AuthScreen> {
                 .signInWithEmailAndPassword(email: email, password: password);
             // Authentication successful
             print('User authenticated: ${userCredential.user?.email}');
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => HomeScreen(newUser: true)),
-            );
+
             setState(() {
               user = userCredential.user;
             });
+
+            Navigator.pushReplacement(
+                context, MaterialPageRoute(builder: (context) => HomeScreen()));
           } catch (e) {
             // Sign up failed
             print('Sign up error: $e');
@@ -100,14 +94,14 @@ class _AuthScreenState extends State<AuthScreen> {
         } else if (e is FirebaseAuthException && e.code == 'wrong-password') {
           showDialog(
             context: context,
-            builder: (BuildContext context) {
+            builder: (BuildContext dialogContext) {
               return AlertDialog(
                 title: const Text('Wrong Password'),
                 content: const Text('The password entered is incorrect.'),
                 actions: [
                   TextButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.of(dialogContext).pop();
                     },
                     child: const Text('OK'),
                   ),
@@ -127,14 +121,66 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [Text('Login')],
+        backgroundColor: Colors.black,
+        elevation: 0,
+        title: Text(
+          'Login',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
+        centerTitle: true,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Theme(
+          data: ThemeData(
+            brightness: Brightness.dark,
+            primaryColor: Colors.black,
+            accentColor: Colors.black,
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.grey[800],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.red),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 16,
+              ),
+              labelStyle: TextStyle(
+                color: Colors.black,
+              ),
+              hintStyle: TextStyle(
+                color: Colors.black,
+              ),
+            ),
+            textTheme: TextTheme(
+              subtitle1: TextStyle(
+                color: Colors.black,
+              ),
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all(Colors.black),
+                shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ),
           child: Form(
             key: _formKey,
             child: Column(
@@ -142,9 +188,11 @@ class _AuthScreenState extends State<AuthScreen> {
               children: <Widget>[
                 TextFormField(
                   controller: emailController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
                     labelText: 'Email',
+                  ),
+                  style: TextStyle(
+                    color: Colors.black,
                   ),
                   validator: validateEmail,
                 ),
@@ -152,18 +200,41 @@ class _AuthScreenState extends State<AuthScreen> {
                 TextFormField(
                   controller: passController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
                     labelText: 'Password',
+                  ),
+                  style: TextStyle(
+                    color: Colors.black,
                   ),
                   validator: validatePassword,
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: user != null ? logout : authUser,
-                  child: Text(user != null ? 'Logout' : 'Login'),
+                  onPressed: authUser,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 40,
+                    ),
+                    child: Text(
+                      user != null ? 'Logout' : 'Login',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-                if (user != null) const Text('User is already signed in.'),
+                if (user != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      'User is already signed in.',
+                      style: TextStyle(
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
