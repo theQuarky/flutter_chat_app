@@ -1,12 +1,11 @@
 import app from './App';
-// import express from 'express';
 import http from 'http';
-import socketIO, { Socket } from 'socket.io';
+import { Server as SocketIOServer, Socket } from 'socket.io';
 import configureSocketServer from './socketServer';
 
 const port = 3000;
 const server = http.createServer(app);
-const io = new socketIO.Server(server);
+const io = new SocketIOServer(server);
 
 // Configure and handle socket events
 
