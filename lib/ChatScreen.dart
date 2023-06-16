@@ -151,6 +151,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    print(widget.partnerId);
     getPartnerData();
     findChatDoc();
     // makeLastMessageSeen();
@@ -163,7 +164,7 @@ class _ChatScreenState extends State<ChatScreen> {
         child: CircularProgressIndicator(),
       );
     }
-
+    print(chatDocId);
     return Scaffold(
       appBar: AppBar(
         title: Text(partner!['displayName'] ?? 'User'),
@@ -177,62 +178,45 @@ class _ChatScreenState extends State<ChatScreen> {
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   final data = snapshot.data?.data();
-                  final chats =
-                      List<Map<String, dynamic>>.from(data?['chats'] ?? []);
+                  final chats = data?['chats']?.cast<Map<String, dynamic>>();
 
-                  if (chats.isNotEmpty) {
-                    chats.sort((a, b) {
-                      return b['time'] - a['time'];
-                    });
+                  return ListView.builder(
+                    itemCount: chats?.length ?? 0,
+                    itemBuilder: (context, index) {
+                      final chat = chats?[index];
+                      final sender = chat?['sender'];
+                      final text = chat?['text'];
+                      final time = chat?['time'];
 
-                    return ListView.builder(
-                      reverse: true,
-                      itemCount: chats.length,
-                      itemBuilder: (context, index) {
-                        final chat = chats[index];
-                        final sender = chat['sender'];
-                        final text = chat['text'];
-                        final time = chat['time'];
+                      // Format timestamp to a more readable format
+                      final formattedTime = DateFormat('HH:mm').format(
+                        DateTime.fromMillisecondsSinceEpoch(time),
+                      );
 
-                        // Format timestamp to a more readable format
-                        final formattedTime = DateFormat('HH:mm').format(
-                          DateTime.fromMillisecondsSinceEpoch(time),
-                        );
+                      // Determine if the message is sent by the user or the partner
+                      final isUserMessage =
+                          sender == FirebaseAuth.instance.currentUser?.uid;
 
-                        // Determine if the message is sent by the user or the partner
-                        final isUserMessage =
-                            sender == FirebaseAuth.instance.currentUser?.uid;
-
-                        return ChatBubble(
-                          isUserMessage: isUserMessage,
-                          text: text,
-                          formattedTime: formattedTime,
-                        );
-                      },
-                    );
-                  } else {
-                    final random = Random();
-                    final randomSuggestion = conversationSuggestions[
-                        random.nextInt(conversationSuggestions.length)];
-
-                    return Center(
-                      child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('Ask them something!'),
-                            Text(randomSuggestion)
-                          ]),
-                    );
-                  }
-                } else if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
+                      return ChatBubble(
+                        isUserMessage: isUserMessage,
+                        text: text,
+                        formattedTime: formattedTime,
+                      );
+                    },
                   );
                 } else {
-                  return const Center(
-                    child: Text('No messages found.'),
-                  );
+                  final random = Random();
+                  final randomSuggestion = conversationSuggestions[
+                      random.nextInt(conversationSuggestions.length)];
+
+                  return Center(
+                      child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Ask them something!'),
+                      Text(randomSuggestion)
+                    ],
+                  ));
                 }
               },
             ),

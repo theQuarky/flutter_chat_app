@@ -1,10 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:http/http.dart' as http;
 
 class TempChatScreen extends StatefulWidget {
   const TempChatScreen({Key? key}) : super(key: key);
@@ -18,7 +15,6 @@ class _TempChatScreenState extends State<TempChatScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _messageController = TextEditingController();
   Map<String, dynamic>? user, partner;
-  bool meAddedFriend = false;
 
   void setUsers() async {
     DocumentReference tempChatDoc =
@@ -100,16 +96,6 @@ class _TempChatScreenState extends State<TempChatScreen> {
     };
     await _firestore.collection('tempChats').doc(tempChatDocId).update({
       'chats': FieldValue.arrayUnion([chat]),
-    }).then((value) async {
-      // FirebaseMessaging messaging = FirebaseMessaging.instance;
-
-      // await messaging.sendMessage(
-      //   to: partner?['deviceToken'],
-      //   data: {
-      //     'title': 'New Message',
-      //     'body': 'You have a new message!',
-      //   },
-      // );
     });
     _messageController.clear();
   }
@@ -119,9 +105,6 @@ class _TempChatScreenState extends State<TempChatScreen> {
       await _firestore.collection('tempChats').doc(tempChatDocId).update({
         'isFriend': FieldValue.arrayUnion(
             [FirebaseAuth.instance.currentUser?.uid as String]),
-      });
-      setState(() {
-        meAddedFriend = true;
       });
       return;
     }
@@ -181,6 +164,8 @@ class _TempChatScreenState extends State<TempChatScreen> {
         child: CircularProgressIndicator(),
       );
     }
+    print('User: $user');
+    print('Partner: $partner');
 
     return Scaffold(
       appBar: AppBar(
@@ -190,18 +175,8 @@ class _TempChatScreenState extends State<TempChatScreen> {
           Navigator.pushNamed(context, "/home");
         }),
         actions: [
-          ElevatedButton(
-            onPressed: !meAddedFriend
-                ? addFriend
-                : null, // Disable the button based on the 'isButtonEnabled' condition
-            style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all<Color>(
-                !meAddedFriend
-                    ? Theme.of(context).primaryColor
-                    : Colors
-                        .grey, // Set the button color based on the 'isButtonEnabled' condition
-              ),
-            ),
+          GestureDetector(
+            onTap: addFriend,
             child: Container(
               margin: const EdgeInsets.only(right: 16.0),
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -216,7 +191,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
                 ],
               ),
             ),
-          ),
+          )
         ],
       ),
       body: Column(
@@ -317,11 +292,11 @@ class _TempChatScreenState extends State<TempChatScreen> {
 
 class ChatBubble extends StatelessWidget {
   const ChatBubble({
-    Key? key,
+    super.key,
     required this.isUserMessage,
     required this.text,
     required this.formattedTime,
-  }) : super(key: key);
+  });
 
   final bool isUserMessage;
   final String text;
@@ -336,23 +311,17 @@ class ChatBubble extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12.0),
           decoration: BoxDecoration(
-            color:
-                isUserMessage ? Colors.lightBlueAccent : Colors.grey.shade300,
+            color: isUserMessage ? Colors.blue : Colors.grey.shade200,
             borderRadius: BorderRadius.circular(16.0),
-          ),
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width *
-                0.7, // Limit the width of the chat bubble
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                text,
+                text ?? '',
                 style: TextStyle(
                   color: isUserMessage ? Colors.white : Colors.black,
-                  fontSize: 16.0,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 4.0),

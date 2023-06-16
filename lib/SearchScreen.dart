@@ -1,4 +1,7 @@
 import 'dart:async';
+
+import 'package:chat_app/MainScreen.dart';
+import 'package:chat_app/TempChatScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -19,53 +22,46 @@ class _SearchScreenState extends State<SearchScreen>
 
   void addToSearchQueue() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
     final userDocumentRef = _firestore.collection('users').doc(uid ?? '');
     final userSnapshot = await userDocumentRef.get();
-    final userData = userSnapshot.data() as Map<String, dynamic>?;
+    final userData = userSnapshot.data();
 
     if (userData != null) {
       final gender = userData['gender'];
-      final oppositeGender = gender == 'male' ? 'female' : 'male';
 
-      final oppositeQueueRef =
-          _firestore.collection('searchQueue').doc(oppositeGender);
-      final oppositeQueueSnapshot = await oppositeQueueRef.get();
-      final oppositeQueueData = oppositeQueueSnapshot.data();
+      final searchQueueRef = _firestore
+          .collection('searchQueue')
+          .doc(gender == 'male' ? 'female' : 'male');
+      final searchQueueSnapshot = await searchQueueRef.get();
+      final searchQueueData = searchQueueSnapshot.data();
 
-      if (oppositeQueueData != null &&
-          (oppositeQueueData['active'] as List).isEmpty) {
-        final currentQueueRef =
-            _firestore.collection('searchQueue').doc(gender);
-        currentQueueRef.update({
+      if (searchQueueData != null &&
+          (searchQueueData['active'] as List).isEmpty) {
+        print("IF");
+        // adding self in  searchQueue queue
+        _firestore.collection('searchQueue').doc(gender).update({
           'active': FieldValue.arrayUnion([uid])
         });
-        listenPicker();
-      } else if (oppositeQueueData != null) {
-        final chatId = oppositeQueueData['active'][0] as String;
+      } else if (searchQueueData != null) {
+        print("ELSE IF");
+        final partner = searchQueueData['active'][0] as String;
+        final tempChatsRef = _firestore
+            .collection('tempChats')
+            .where('partner', isEqualTo: partner);
 
-        final tempChatsRef = _firestore.collection('tempChats');
-
-        final queryA = tempChatsRef.where('partyA', isEqualTo: chatId);
-        final queryB = tempChatsRef.where('partyB', isEqualTo: chatId);
-
-        final snapshotA = await queryA.get();
-        final snapshotB = await queryB.get();
-        final batch = _firestore.batch();
-
-        for (final doc in snapshotA.docs) {
-          batch.delete(doc.reference);
-        }
-        for (final doc in snapshotB.docs) {
-          batch.delete(doc.reference);
-        }
-
-        await batch.commit();
-        await oppositeQueueRef.update({
-          'active': FieldValue.arrayRemove([chatId])
+        tempChatsRef.get().then((value) {
+          value.docs.forEach((element) async {
+            await element.reference.delete();
+          });
         });
+        print("partner: $partner");
+        CollectionReference tempChat = _firestore.collection('tempChats');
+        await tempChat.add({'partner': partner, 'me': uid});
 
-        final tempChatRef = _firestore.collection('tempChats');
-        await tempChatRef.add({'partyA': chatId, 'partyB': uid});
+        print(await _firestore.collection('tempChats').count());
+
         Navigator.pushNamed(context, '/tempChat');
       }
     }
@@ -76,37 +72,33 @@ class _SearchScreenState extends State<SearchScreen>
     if (uid == null) return;
 
     final tempChatsRef = _firestore.collection('tempChats');
-    final tempChatSnapshotA =
-        await tempChatsRef.where('partyA', isEqualTo: uid).get();
-    final tempChatSnapshotB =
-        await tempChatsRef.where('partyB', isEqualTo: uid).get();
-
-    if (tempChatSnapshotA.size > 0 || tempChatSnapshotB.size > 0) {
-      Navigator.pushNamed(context, '/tempChat');
-      return;
-    }
-
     final userDocumentRef = _firestore.collection('users').doc(uid);
     final userSnapshot = await userDocumentRef.get();
-    final userData = userSnapshot.data() as Map<String, dynamic>?;
+    final userData = userSnapshot.data();
 
     if (userData != null) {
-      final gender = userData['gender'];
+      final gender = userData['gender'] == 'male' ? 'female' : 'male';
       final queueDocumentRef = _firestore.collection('searchQueue').doc(gender);
 
+      _subscription?.cancel(); // Cancel the previous listener, if any
+
       _subscription = queueDocumentRef.snapshots().listen((snapshot) async {
-        final searchQueueData = snapshot.data() as Map<String, dynamic>?;
-        if (searchQueueData != null &&
-            !(searchQueueData['active'] as List).contains(uid)) {
-          final partyAQuery = tempChatsRef.where('partyA', isEqualTo: uid);
-          final partyBQuery = tempChatsRef.where('partyB', isEqualTo: uid);
+        final searchQueueData = snapshot.data();
 
-          final partyASnapshot = await partyAQuery.get();
-          final partyBSnapshot = await partyBQuery.get();
+        if (searchQueueData != null) {
+          final activeUsers = searchQueueData['active'] as List<dynamic>;
 
-          if (partyASnapshot.size > 0 || partyBSnapshot.size > 0) {
-            _subscription?.cancel();
-            Navigator.pushNamed(context, '/tempChat');
+          if (!activeUsers.contains(uid)) {
+            final partyQueryA = tempChatsRef.where('partyA', isEqualTo: uid);
+            final partyQueryB = tempChatsRef.where('partyB', isEqualTo: uid);
+
+            final snapshotA = await partyQueryA.get();
+            final snapshotB = await partyQueryB.get();
+
+            if (snapshotA.size > 0 || snapshotB.size > 0) {
+              _subscription?.cancel();
+              Navigator.pushNamed(context, '/tempChat');
+            }
           }
         }
       });
@@ -196,9 +188,10 @@ class _SearchScreenState extends State<SearchScreen>
               _subscription?.cancel();
               documentRef.update({
                 'active': FieldValue.arrayRemove([uid]),
-              }).then((value) {
-                Navigator.pushNamed(context, '/home');
               });
+              // ignore: use_build_context_synchronously
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (context) => const MainScreen()));
             },
             child: const Text('Exit'),
           )

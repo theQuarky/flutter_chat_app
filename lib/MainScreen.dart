@@ -2,9 +2,9 @@ import 'package:chat_app/FriendListScreen.dart';
 import 'package:chat_app/ProfileScreen.dart';
 import 'package:chat_app/SearchScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'AuthScreen.dart';
 
 class MainScreen extends StatefulWidget {

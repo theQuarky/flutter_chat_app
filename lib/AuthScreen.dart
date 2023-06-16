@@ -64,7 +64,9 @@ class _AuthScreenState extends State<AuthScreen> {
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => HomeScreen()));
       } catch (e) {
-        if (e is FirebaseAuthException && e.code == 'user-not-found') {
+        print(e.hashCode);
+        if ((e is FirebaseAuthException && e.code == 'user-not-found') ||
+            e.hashCode == 250833728) {
           try {
             final email = emailController.text.trim();
             final password = passController.text.trim();
@@ -139,7 +141,6 @@ class _AuthScreenState extends State<AuthScreen> {
           data: ThemeData(
             brightness: Brightness.dark,
             primaryColor: Colors.black,
-            accentColor: Colors.black,
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
               fillColor: Colors.grey[800],

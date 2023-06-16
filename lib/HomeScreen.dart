@@ -1,5 +1,4 @@
 import 'package:chat_app/ProfileScreen.dart';
-import 'package:chat_app/services/userService.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,19 +14,20 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   User? user = FirebaseAuth.instance.currentUser;
-  late bool newUserCheck = false;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool? newUserCheck = null;
 
   void isNewUser() async {
-    try {
-      final user =
-          await getUserDataByUID(FirebaseAuth.instance.currentUser?.uid);
-      print("USER DATA: $user");
-      if (user != null) {
-        setState(() {
-          newUserCheck = true;
-        });
-      }
-    } catch (e) {}
+    User? user = await FirebaseAuth.instance.currentUser;
+    DocumentSnapshot doc =
+        await _firestore.collection('users').doc(user?.uid).get();
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    print(data);
+    if (data.isNotEmpty) {
+      setState(() {
+        newUserCheck = true;
+      });
+    }
   }
 
   @override
@@ -49,10 +49,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (newUserCheck == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
     return Container(
       color: Colors.white,
       child: Center(
-        child: newUserCheck ? const MainScreen() : const ProfileEditScreen(),
+        child: newUserCheck == true
+            ? const MainScreen()
+            : const ProfileEditScreen(),
       ),
     );
   }
