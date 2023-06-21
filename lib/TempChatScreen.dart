@@ -1,24 +1,83 @@
+import 'dart:async';
+import 'dart:html' as html;
+import 'dart:io';
+import 'package:chat_app/HomeScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 
 class TempChatScreen extends StatefulWidget {
-  const TempChatScreen({Key? key}) : super(key: key);
+  final tempChatDocId;
+
+  TempChatScreen({required String this.tempChatDocId});
 
   @override
   State<TempChatScreen> createState() => _TempChatScreenState();
 }
 
 class _TempChatScreenState extends State<TempChatScreen> {
-  String tempChatDocId = '';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _messageController = TextEditingController();
   Map<String, dynamic>? user, partner;
 
+  late Timer _timer;
+  int _start = 900; // 15 minutes in seconds
+
+  void endChatListener() {
+    _firestore
+        .collection('tempChats')
+        .doc(widget.tempChatDocId)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.data() == null) {
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (builder) => HomeScreen()));
+      }
+    });
+  }
+
+  void startTimer() {
+    const oneSec = const Duration(seconds: 1);
+    _timer = Timer.periodic(
+      oneSec,
+      (Timer timer) {
+        if (_start == 0) {
+          _firestore
+              .collection('tempChats')
+              .doc(widget.tempChatDocId)
+              .delete()
+              .then((value) {
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (builder) => HomeScreen()));
+          });
+          setState(() {
+            timer.cancel();
+          });
+        } else {
+          setState(() {
+            _start--;
+          });
+        }
+      },
+    );
+  }
+
+  String formatTime(int seconds) {
+    int minutes = seconds ~/ 60;
+    int remainingSeconds = seconds % 60;
+
+    String minutesStr = minutes.toString().padLeft(2, '0');
+    String secondsStr = remainingSeconds.toString().padLeft(2, '0');
+
+    return '$minutesStr:$secondsStr';
+  }
+
   void setUsers() async {
     DocumentReference tempChatDoc =
-        _firestore.collection('tempChats').doc(tempChatDocId);
+        _firestore.collection('tempChats').doc(widget.tempChatDocId);
     DocumentSnapshot snapshot = await tempChatDoc.get();
     Map<String, dynamic> data = (snapshot.data() ?? {}) as Map<String, dynamic>;
 
@@ -31,7 +90,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
       userId = data['partyB'];
       partnerId = data['partyA'];
     }
-
+    print('userId: $userId | partnerId: $partnerId');
     DocumentReference usersDoc = _firestore.collection('users').doc(userId);
     DocumentSnapshot userSnapshot = await usersDoc.get();
     Map<String, dynamic> userData =
@@ -49,40 +108,6 @@ class _TempChatScreenState extends State<TempChatScreen> {
     });
   }
 
-  void findTempChatDocId() async {
-    try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      Query userDocumentRef = _firestore
-          .collection('tempChats')
-          .where('partyA', isEqualTo: uid)
-          .limit(1);
-      QuerySnapshot snapshot = await userDocumentRef.get();
-      if (snapshot.docs.isNotEmpty) {
-        final doc = snapshot.docs.first;
-        setState(() {
-          tempChatDocId = doc.id;
-        });
-        setUsers();
-        return;
-      }
-      userDocumentRef = FirebaseFirestore.instance
-          .collection('tempChats')
-          .where('partyB', isEqualTo: uid)
-          .limit(1);
-      snapshot = await userDocumentRef.get();
-      if (snapshot.docs.isNotEmpty) {
-        final doc = snapshot.docs.first;
-        setState(() {
-          tempChatDocId = doc.id;
-        });
-        setUsers();
-        return;
-      }
-    } catch (e) {
-      print('TempChatScreen $e');
-    }
-  }
-
   void sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) {
@@ -94,7 +119,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
       'text': text,
       'time': DateTime.now().millisecondsSinceEpoch,
     };
-    await _firestore.collection('tempChats').doc(tempChatDocId).update({
+    await _firestore.collection('tempChats').doc(widget.tempChatDocId).update({
       'chats': FieldValue.arrayUnion([chat]),
     });
     _messageController.clear();
@@ -102,7 +127,10 @@ class _TempChatScreenState extends State<TempChatScreen> {
 
   void addFriend({bool isPermanent = false}) async {
     if (!isPermanent) {
-      await _firestore.collection('tempChats').doc(tempChatDocId).update({
+      await _firestore
+          .collection('tempChats')
+          .doc(widget.tempChatDocId)
+          .update({
         'isFriend': FieldValue.arrayUnion(
             [FirebaseAuth.instance.currentUser?.uid as String]),
       });
@@ -128,7 +156,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
       // Friend does not exist, add the friend to the friends array
       final friend = {
         'uid': partner!['uid'],
-        'lastMessage': {'time': DateTime.now()}
+        'lastMessage': {'time': DateTime.now().microsecondsSinceEpoch}
       };
 
       await userDocRef.update({
@@ -140,13 +168,54 @@ class _TempChatScreenState extends State<TempChatScreen> {
   }
 
   void cleanTempChats() async {
-    await _firestore.collection('tempChats').doc(tempChatDocId).delete();
+    await _firestore.collection('tempChats').doc(widget.tempChatDocId).delete();
+  }
+
+  void showPopupMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Add Friend'),
+                onTap: () {
+                  Navigator.pop(context, 'Add');
+                },
+              ),
+              ListTile(
+                title: Text('End Chat'),
+                onTap: () {
+                  Navigator.pop(context, 'End');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((selectedValue) {
+      if (selectedValue != null) {
+        // Handle the selected value
+        switch (selectedValue) {
+          case "Add":
+            addFriend();
+            break;
+          case "End":
+            cleanTempChats();
+            break;
+          default:
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     // TODO: implement dispose
     super.dispose();
+    _timer.cancel();
     cleanTempChats();
   }
 
@@ -154,45 +223,79 @@ class _TempChatScreenState extends State<TempChatScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    findTempChatDocId();
+    setUsers();
+    startTimer();
+    endChatListener();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (tempChatDocId == '' && user == null && partner == null) {
+    if (widget.tempChatDocId == '' && user == null && partner == null) {
       return const Center(
         child: CircularProgressIndicator(),
       );
     }
-    print('User: $user');
-    print('Partner: $partner');
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(partner?['displayName'] ?? ''),
-        leading: BackButton(onPressed: () {
-          cleanTempChats();
-          Navigator.pushNamed(context, "/home");
-        }),
-        actions: [
-          GestureDetector(
-            onTap: addFriend,
+        automaticallyImplyLeading: false,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        flexibleSpace: SafeArea(
             child: Container(
-              margin: const EdgeInsets.only(right: 16.0),
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
-                children: const [
-                  Icon(Icons.add),
-                  SizedBox(width: 6.0),
+          padding: EdgeInsets.only(right: 16),
+          child: Row(children: [
+            IconButton(
+                onPressed: () {
+                  cleanTempChats();
+                  Navigator.of(context).pop();
+                },
+                icon: Icon(Icons.arrow_back, color: Colors.black)),
+            SizedBox(
+              width: 2,
+            ),
+            CircleAvatar(
+              backgroundImage: NetworkImage('https://robohash.org/$user'),
+              maxRadius: 20,
+            ),
+            SizedBox(
+              width: 12,
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
                   Text(
-                    'Add Friend',
-                    style: TextStyle(fontSize: 16.0),
+                    "Stranger",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
+                  SizedBox(
+                    height: 6,
+                  )
                 ],
               ),
             ),
-          )
-        ],
+            SizedBox(
+              width: 2,
+            ),
+            Text(
+              formatTime(_start),
+              style: TextStyle(fontSize: 24),
+            ),
+            SizedBox(
+              width: 2,
+            ),
+            IconButton(
+                onPressed: () {
+                  showPopupMenu(context);
+                },
+                icon: Icon(
+                  Icons.settings,
+                  color: Colors.black54,
+                )),
+          ]),
+        )),
       ),
       body: Column(
         children: [
@@ -200,13 +303,12 @@ class _TempChatScreenState extends State<TempChatScreen> {
             child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
               stream: _firestore
                   .collection('tempChats')
-                  .doc(tempChatDocId)
+                  .doc(widget.tempChatDocId)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   final data = snapshot.data?.data();
-                  final chats = data?['chats']?.cast<Map<String, dynamic>>();
-
+                  List? chats = data?['chats']?.cast<Map<String, dynamic>>();
                   if (data != null && data['isFriend'] != null) {
                     List isFriend = data['isFriend'] as List;
 
@@ -214,6 +316,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
                         isFriend.contains(partner!['uid'])) {
                       final name = partner!['displayName'];
                       addFriend(isPermanent: true);
+
                       return Center(
                         child: Text(
                           'You both are friends now!! You can check $name on your home page',
@@ -228,8 +331,16 @@ class _TempChatScreenState extends State<TempChatScreen> {
                     );
                   }
 
+                  chats.sort((a, b) {
+                    // sort by time
+                    final aTime = a['time'] as int;
+                    final bTime = b['time'] as int;
+                    return bTime.compareTo(aTime);
+                  });
+
                   return ListView.builder(
                     itemCount: chats.length,
+                    reverse: true,
                     itemBuilder: (context, index) {
                       final chat = chats[index];
                       final sender = chat['sender'];
@@ -299,7 +410,7 @@ class ChatBubble extends StatelessWidget {
   });
 
   final bool isUserMessage;
-  final String text;
+  final text;
   final String formattedTime;
 
   @override
@@ -317,13 +428,32 @@ class ChatBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                text ?? '',
-                style: TextStyle(
-                  color: isUserMessage ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              text is String
+                  ? Text(
+                      text,
+                      style: TextStyle(
+                        color: isUserMessage ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    )
+                  : (text['type'] == 'image'
+                      ? Image.network(text['image'])
+                      : Container(
+                          width: 200,
+                          height: 200,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final imageUrl = text['image'];
+                              _downloadFile(context, imageUrl);
+                            },
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                const Icon(Icons.download_rounded, size: 64),
+                              ],
+                            ),
+                          ),
+                        )),
               const SizedBox(height: 4.0),
               Text(
                 formattedTime,
@@ -339,3 +469,61 @@ class ChatBubble extends StatelessWidget {
     );
   }
 }
+
+void _downloadFile(BuildContext context, String url) async {
+  try {
+    final response = await html.HttpRequest.request(url, responseType: 'blob');
+
+    if (response.status == 200) {
+      final String dir =
+          'filename.extension'; // Specify the desired file name and extension
+      html.AnchorElement(
+        href: url,
+      )
+        ..setAttribute('download', dir)
+        ..click();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('File downloaded successfully')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to download file')),
+      );
+    }
+  } catch (error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error downloading file')),
+    );
+  }
+}
+
+// void _downloadFile(BuildContext context, String url) async {
+//   try {
+//     final httpClient = HttpClient();
+//     final request = await httpClient.getUrl(Uri.parse(url));
+//     final response = await request.close();
+//     if (response.statusCode == HttpStatus.ok) {
+//       final bytes = await consolidateHttpClientResponseBytes(response);
+//       final String dir = (await getApplicationDocumentsDirectory()).path;
+//       final String filePath =
+//           '$dir/filename.extension'; // Specify the desired file name and extension
+
+//       File file = File(filePath);
+//       await file.writeAsBytes(bytes);
+
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(content: Text('File downloaded successfully')),
+//       );
+//     } else {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(content: Text('Failed to download file')),
+//       );
+//     }
+//   } catch (error) {
+//     print(error);
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text('Error downloading file')),
+//     );
+//   }
+// }

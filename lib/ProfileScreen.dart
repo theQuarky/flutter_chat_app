@@ -1,11 +1,17 @@
+import 'dart:html' as html;
+import 'dart:typed_data';
+
+import 'package:chat_app/AuthScreen.dart';
+import 'package:chat_app/MainScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
+// import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 // import 'package:image_picker/image_picker.dart';
 
 enum Gender { male, female }
@@ -24,8 +30,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final TextEditingController _dobController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ImagePicker _picker = ImagePicker();
+  String extension = '';
   bool isNewUser = true;
-  File? _selectedImage;
+  String url = '';
+  // File? _selectedImage;
+  html.Blob? _selectedImage;
 
   Gender _gender = Gender.male;
 
@@ -40,6 +49,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _gender = data['gender'] == 'male' ? Gender.male : Gender.female;
         _displayNameController.text = data['displayName'] ?? '';
         _imageController.text = data['image'] ?? '';
+        url = data['image'] ?? '';
         _dobController.text = data['dob'] ?? '';
       });
     }
@@ -60,19 +70,50 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     super.dispose();
   }
 
-  Future<String?> uploadImage(File imageFile) async {
+  Future<String>? uploadImage(dynamic imageFile) async {
     try {
-      final fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      final reference = FirebaseStorage.instance.ref().child(fileName);
-      await reference.putFile(imageFile);
-      final imageUrl = await reference.getDownloadURL();
-      _imageController.text = imageUrl;
-      return imageUrl;
+      final http.Response response = await http.get(Uri.parse(url));
+      final Uint8List imageData = response.bodyBytes;
+
+      // Generate a unique filename for the image (optional)
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Create a reference to the Firebase Storage location
+      firebase_storage.Reference storageReference =
+          firebase_storage.FirebaseStorage.instance.ref().child(fileName);
+
+      // Upload the image data to Firebase Storage
+      firebase_storage.UploadTask uploadTask =
+          storageReference.putData(imageData);
+
+      // Get the download URL of the uploaded image
+      firebase_storage.TaskSnapshot storageSnapshot =
+          await uploadTask.whenComplete(() => null);
+      String downloadUrl = await storageSnapshot.ref.getDownloadURL();
+
+      // Use the download URL as needed (e.g., save it to a document in Firestore)
+      print('Download URL: $downloadUrl');
+      return downloadUrl;
     } catch (e) {
-      print('Error uploading image: $e');
-      return null;
+      print("ERROR: $e");
+      throw e;
     }
   }
+
+  // this one is for android
+  // Future<String?> uploadImage(File imageFile) async {
+  //   try {
+  //     final fileName = DateTime.now().millisecondsSinceEpoch.toString();
+  //     final reference = FirebaseStorage.instance.ref().child(fileName);
+  //     await reference.putFile(imageFile);
+  //     final imageUrl = await reference.getDownloadURL();
+  //     _imageController.text = imageUrl;
+  //     return imageUrl;
+  //   } catch (e) {
+  //     print('Error uploading image: $e');
+  //     return null;
+  //   }
+  // }
 
   void _saveProfile() async {
     if (_formKey.currentState!.validate()) {
@@ -125,7 +166,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           print("User saved!");
           ScaffoldMessenger.of(context)
               .showSnackBar(const SnackBar(content: Text('Profile Saved!')));
-          Navigator.pushNamed(context, '/home');
+          Navigator.push(
+              context, MaterialPageRoute(builder: (builder) => MainScreen()));
         }).catchError((error) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('Error Occur while saving your profile')));
@@ -138,13 +180,17 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   pickImage() async {
     final image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return null;
+    final bytes = await image.readAsBytes();
     setState(() {
-      _selectedImage = File(image.path);
+      extension = image.mimeType!.split('/').last;
+      url = image.path;
+      _selectedImage = html.Blob(bytes);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    print(url);
     return Scaffold(
       body: Container(
         color: Colors.white,
@@ -173,24 +219,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.blue, width: 2),
                         ),
-                        child: ClipOval(
-                          child: _imageController.text.isNotEmpty ||
-                                  _selectedImage != null
-                              ? (_selectedImage == null
-                                  ? Image(
-                                      image:
-                                          NetworkImage(_imageController.text),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.file(
-                                      _selectedImage!,
-                                      fit: BoxFit.cover,
-                                    ))
-                              : ElevatedButton(
+                        child: _selectedImage != null || url != ''
+                            ? CircleAvatar(
+                                backgroundImage: Image.network(url).image)
+                            : ClipOval(
+                                child: ElevatedButton(
                                   onPressed: pickImage,
                                   child: const Icon(Icons.camera_alt),
                                 ),
-                        ),
+                              ),
                       ),
                     ),
                     if (_imageController.text.isNotEmpty ||
@@ -200,6 +237,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         onPressed: () {
                           setState(() {
                             _selectedImage = null;
+                            url = '';
                             _imageController.text = '';
                           });
                         },
@@ -280,10 +318,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   height: 20,
                 ),
                 ElevatedButton(
-                    onPressed: () {
-                      FirebaseAuth.instance.signOut();
-                      Navigator.pushNamed(context, '/auth');
-                    },
+                    onPressed: () => FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(FirebaseAuth.instance.currentUser?.uid)
+                            .update({'deviceToken': ''}).then((value) {
+                          FirebaseAuth.instance.signOut();
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (builder) => AuthScreen()));
+                        }),
                     child: const Text('Logout'))
               ],
             ),

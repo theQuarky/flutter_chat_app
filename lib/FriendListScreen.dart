@@ -14,19 +14,9 @@ class _FriendListScreenState extends State<FriendListScreen> {
   User? user = FirebaseAuth.instance.currentUser;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  void getFriendList() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    DocumentReference ref = _firestore.collection('users').doc(uid);
-    DocumentSnapshot snapshot = await ref.get();
-    Map<String, dynamic> data = (snapshot.data() ?? {}) as Map<String, dynamic>;
-
-    print(data);
-  }
-
   @override
   void initState() {
     super.initState();
-    getFriendList();
   }
 
   @override
@@ -48,17 +38,24 @@ class _FriendListScreenState extends State<FriendListScreen> {
             final data = snapshot.data?.data() as Map<String, dynamic>;
             List<dynamic> friendList = data['friends'] ?? [];
             friendList.sort((a, b) {
-              final aTime = (a['lastMessage'] as Timestamp).toDate();
-              final bTime = (b['lastMessage'] as Timestamp).toDate();
-              return bTime.compareTo(aTime); // Sort in descending order
+              return b['lastMessage']['time'] - a['lastMessage']['time'];
             });
-
-            print(friendList);
 
             return ListView.builder(
               itemCount: friendList.length,
               itemBuilder: (context, index) {
                 final friendId = friendList[index]['uid'];
+                var _lastMessage = friendList[index]['lastMessage']['text'];
+
+                final lastMessage =
+                    _lastMessage is String ? _lastMessage : "Media file";
+
+                final isSeen =
+                    friendList[index]['lastMessage']['seen'] ?? false;
+
+                final showUnread = isSeen == false &&
+                    friendList[index]['lastMessage']['by'] != user?.uid;
+
                 return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                   future: _firestore.collection('users').doc(friendId).get(),
                   builder: (context, snapshot) {
@@ -85,25 +82,45 @@ class _FriendListScreenState extends State<FriendListScreen> {
                           ),
                         ),
                         child: ListTile(
-                          leading: Image.network(
-                            avatar,
-                            errorBuilder: (context, error, stackTrace) {
-                              print('Error loading image: $error');
-                              // Provide a fallback image or placeholder
-                              return const CircleAvatar(
-                                backgroundColor: Colors.grey,
-                                child: Icon(Icons.person),
-                              );
-                            },
-                          ),
-                          title: Text(
-                            friendName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
+                            leading: avatar == null || avatar == ""
+                                ? const CircleAvatar(
+                                    backgroundColor: Colors.grey,
+                                    child: Icon(Icons.person),
+                                  )
+                                : CircleAvatar(
+                                    backgroundImage:
+                                        Image.network(avatar).image,
+                                    maxRadius: 20,
+                                  ),
+                            title: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      friendName,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Icon(
+                                      Icons.circle,
+                                      size: 10,
+                                      color: showUnread
+                                          ? Colors.green
+                                          : Colors.transparent,
+                                    )
+                                  ],
+                                ),
+                                SizedBox(height: 5),
+                                Text(
+                                  lastMessage,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.normal,
+                                      fontSize: 12),
+                                )
+                              ],
+                            )),
                       );
                     } else {
                       return const Center(

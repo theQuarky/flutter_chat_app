@@ -1,6 +1,24 @@
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'HomeScreen.dart';
+
+String _parseFirebaseAuthExceptionMessage(
+    {String plugin = "auth", required String? input}) {
+  if (input == null) {
+    return "unknown";
+  }
+
+  // https://regexr.com/7en3h
+  String regexPattern = r'(?<=\(' + plugin + r'/)(.*?)(?=\)\.)';
+  RegExp regExp = RegExp(regexPattern);
+  Match? match = regExp.firstMatch(input);
+  if (match != null) {
+    return match.group(0)!;
+  }
+
+  return "unknown";
+}
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -63,10 +81,10 @@ class _AuthScreenState extends State<AuthScreen> {
         });
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => HomeScreen()));
-      } catch (e) {
-        print(e.hashCode);
-        if ((e is FirebaseAuthException && e.code == 'user-not-found') ||
-            e.hashCode == 250833728) {
+      } on FirebaseAuthException catch (e) {
+        final code = _parseFirebaseAuthExceptionMessage(input: e.message);
+
+        if (code == 'user-not-found') {
           try {
             final email = emailController.text.trim();
             final password = passController.text.trim();
@@ -78,8 +96,17 @@ class _AuthScreenState extends State<AuthScreen> {
             // User signed up successfully
             print('User signed up: ${userCredential.user?.email}');
 
-            userCredential = await FirebaseAuth.instance
-                .signInWithEmailAndPassword(email: email, password: password);
+            FirebaseAuth.instance
+                .createUserWithEmailAndPassword(
+                    email: email, password: password)
+                .then((value) async {
+              print(
+                  "value: ${value} ${{'email': email, 'password': password}}");
+              userCredential = await FirebaseAuth.instance
+                  .signInWithEmailAndPassword(email: email, password: password);
+            }).catchError((err) {
+              print("ERROR CODE create: ${err}");
+            });
             // Authentication successful
             print('User authenticated: ${userCredential.user?.email}');
 
@@ -93,7 +120,7 @@ class _AuthScreenState extends State<AuthScreen> {
             // Sign up failed
             print('Sign up error: $e');
           }
-        } else if (e is FirebaseAuthException && e.code == 'wrong-password') {
+        } else if (e.code == 'wrong-password') {
           showDialog(
             context: context,
             builder: (BuildContext dialogContext) {
@@ -113,8 +140,14 @@ class _AuthScreenState extends State<AuthScreen> {
           );
         } else {
           // Other authentication errors
-          print('Authentication error: $e');
+          // print('Authentication error: $e');
         }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Unknown error occurred"),
+          ),
+        );
       }
     }
   }
