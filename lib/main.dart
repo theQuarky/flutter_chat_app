@@ -1,6 +1,7 @@
 import 'package:chat_app/ChatScreen.dart';
 import 'package:chat_app/ProfileScreen.dart';
 import 'package:chat_app/SearchScreen.dart';
+import 'package:chat_app/TempScreen.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -16,32 +17,6 @@ void main() async {
 
   runApp(MyApp());
 }
-
-// Future<String> getUrl() async {
-//   return await FirebaseStorage.instance.ref().getDownloadURL();
-// }
-
-// class TestNetworkImage extends StatefulWidget {
-//   TestNetworkImage({super.key});
-
-//   @override
-//   State<TestNetworkImage> createState() => _TestNetworkImageState();
-// }
-
-// class _TestNetworkImageState extends State<TestNetworkImage> {
-//   late String url;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Center(
-//         child: Image.network(
-//       'https://firebasestorage.googleapis.com/v0/b/flutter-c91c8.appspot.com/o/1687252429029?alt=media&token=eed6d796-38d4-4a28-a7d0-7eb27ffac6fb',
-//       fit: BoxFit.cover,
-//       width: 200,
-//       height: 200,
-//     ));
-//   }
-// }
 
 class MyApp extends StatelessWidget {
   MyApp({Key? key}) : super(key: key);

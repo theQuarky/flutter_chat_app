@@ -37,7 +37,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final functions = FirebaseFunctions.instance;
   Map<String, dynamic>? partner = {};
 
-  File? _selectedImage;
+  // File? _selectedImage;
 
   // void sendMessage() async {
   //   final text = _messageController.text.trim();
@@ -379,7 +379,7 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: Icon(Icons.send),
               onPressed: () {
                 // Send message logic goes here
-                String message = _messageController.text;
+                // String message = _messageController.text;
                 sendMessage();
                 _messageController.clear();
               },

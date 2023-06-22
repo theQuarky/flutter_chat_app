@@ -327,6 +327,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               context,
                               MaterialPageRoute(
                                   builder: (builder) => AuthScreen()));
+                        }).catchError((onError) {
+                          FirebaseAuth.instance.signOut();
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (builder) => AuthScreen()));
                         }),
                     child: const Text('Logout'))
               ],

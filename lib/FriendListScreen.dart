@@ -1,4 +1,5 @@
 import 'package:chat_app/ChatScreen.dart';
+import 'package:chat_app/SearchScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +38,31 @@ class _FriendListScreenState extends State<FriendListScreen> {
           } else if (snapshot.hasData) {
             final data = snapshot.data?.data() as Map<String, dynamic>;
             List<dynamic> friendList = data['friends'] ?? [];
+
+            if (friendList.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('You don\'t have any friends yet',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 10),
+                    Text('Search for your friends to start chatting',
+                        style: TextStyle(fontSize: 16)),
+                    ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => SearchScreen()));
+                        },
+                        child: Text("Search"))
+                  ],
+                ),
+              );
+            }
+
             friendList.sort((a, b) {
               return b['lastMessage']['time'] - a['lastMessage']['time'];
             });
