@@ -21,6 +21,8 @@ class _HomeScreenState extends State<HomeScreen> {
     User? user = await FirebaseAuth.instance.currentUser;
     DocumentSnapshot doc =
         await _firestore.collection('users').doc(user?.uid).get();
+
+    if (doc.data() == null) return;
     Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
 
     if (data == null) {

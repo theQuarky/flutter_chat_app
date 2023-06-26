@@ -1,307 +1,286 @@
-import 'dart:math' as math;
-// import 'package:firebase_core/firebase_core.dart';
-import 'dart:convert';
-import 'dart:developer';
+// import 'package:flutter/material.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'HomeScreen.dart';
+// import 'dart:core';
 
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'HomeScreen.dart';
-import 'dart:core';
+// String _parseFirebaseAuthExceptionMessage(
+//     {String plugin = "auth", required String? input}) {
+//   if (input == null) {
+//     return "unknown";
+//   }
 
-String _parseFirebaseAuthExceptionMessage(
-    {String plugin = "auth", required String? input}) {
-  if (input == null) {
-    return "unknown";
-  }
+//   // https://regexr.com/7en3h
+//   String regexPattern = r'(?<=\(' + plugin + r'/)(.*?)(?=\)\.)';
+//   RegExp regExp = RegExp(regexPattern);
+//   Match? match = regExp.firstMatch(input);
+//   if (match != null) {
+//     return match.group(0)!;
+//   }
 
-  // https://regexr.com/7en3h
-  String regexPattern = r'(?<=\(' + plugin + r'/)(.*?)(?=\)\.)';
-  RegExp regExp = RegExp(regexPattern);
-  Match? match = regExp.firstMatch(input);
-  if (match != null) {
-    return match.group(0)!;
-  }
+//   return "unknown";
+// }
 
-  return "unknown";
-}
+// String? _errorHandleForWeb(String errorString) {
+//   try {
+//     String extractedValue = errorString.split("]")[0];
+//     return extractedValue.split('/')[1];
+//   } catch (e) {
+//     return null;
+//   }
+// }
 
-String? _errorHandleForWeb(String errorString) {
-  try {
-    String extractedValue = errorString.split("]")[0];
-    return extractedValue.split('/')[1];
-  } catch (e) {
-    return null;
-  }
-}
+// class AuthScreen extends StatefulWidget {
+//   const AuthScreen({Key? key}) : super(key: key);
 
-// import 'components/center_widget/center_widget.dart';
-// import 'components/login_content.dart';
+//   @override
+//   State<AuthScreen> createState() => _AuthScreenState();
+// }
 
-class SosmadApp extends StatelessWidget {
-  const SosmadApp({super.key});
+// class _AuthScreenState extends State<AuthScreen> {
+//   final _formKey = GlobalKey<FormState>();
+//   final emailController = TextEditingController();
+//   final passController = TextEditingController();
+//   User? user;
 
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'Sosmad',
-      debugShowCheckedModeBanner: false,
-      home: LoginScreen(),
-    );
-  }
-}
+//   @override
+//   void dispose() {
+//     emailController.dispose();
+//     passController.dispose();
+//     super.dispose();
+//   }
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+//   String? validateEmail(String? value) {
+//     if (value?.isEmpty ?? true) {
+//       return 'Please enter your email';
+//     }
+//     final emailRegex = RegExp(r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$');
+//     if (!emailRegex.hasMatch(value!)) {
+//       return 'Please enter a valid email address';
+//     }
+//     return null;
+//   }
 
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
+//   String? validatePassword(String? value) {
+//     if (value?.isEmpty ?? true) {
+//       return 'Please enter your password';
+//     }
+//     if (value!.length < 6) {
+//       return 'Password should be at least 6 characters';
+//     }
+//     return null;
+//   }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final emailController = TextEditingController();
-  final passController = TextEditingController();
-  User? user;
+//   void logout() {
+//     FirebaseAuth.instance.signOut();
+//     setState(() {
+//       user = null;
+//     });
+//   }
 
-  @override
-  void dispose() {
-    emailController.dispose();
-    passController.dispose();
-    super.dispose();
-  }
+//   void authUser() async {
+//     if (_formKey.currentState?.validate() ?? false) {
+//       try {
+//         final email = emailController.text.trim();
+//         final password = passController.text.trim();
+//         UserCredential userCredential = await FirebaseAuth.instance
+//             .signInWithEmailAndPassword(email: email, password: password);
+//         // Authentication successful
+//         setState(() {
+//           user = userCredential.user;
+//         });
+//         Navigator.pushReplacement(
+//             context, MaterialPageRoute(builder: (context) => HomeScreen()));
+//       } on FirebaseAuthException catch (e) {
+//         final code = _parseFirebaseAuthExceptionMessage(input: e.message);
+//         final forWeb = _errorHandleForWeb(e.toString());
 
-  String? validateEmail(String? value) {
-    if (value?.isEmpty ?? true) {
-      return 'Please enter your email';
-    }
-    final emailRegex = RegExp(r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$');
-    if (!emailRegex.hasMatch(value!)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
-  }
+//         if (code == 'user-not-found' || forWeb == 'user-not-found') {
+//           try {
+//             final email = emailController.text.trim();
+//             final password = passController.text.trim();
+//             UserCredential userCredential =
+//                 await FirebaseAuth.instance.createUserWithEmailAndPassword(
+//               email: email,
+//               password: password,
+//             );
+//             // User signed up successfully
+//             print('User signed up: ${userCredential.user?.email}');
 
-  String? validatePassword(String? value) {
-    if (value?.isEmpty ?? true) {
-      return 'Please enter your password';
-    }
-    if (value!.length < 6) {
-      return 'Password should be at least 6 characters';
-    }
-    return null;
-  }
+//             FirebaseAuth.instance
+//                 .createUserWithEmailAndPassword(
+//                     email: email, password: password)
+//                 .then((value) async {
+//               print(
+//                   "value: ${value} ${{'email': email, 'password': password}}");
+//               userCredential = await FirebaseAuth.instance
+//                   .signInWithEmailAndPassword(email: email, password: password);
+//             }).catchError((err) {
+//               print("ERROR CODE create: ${err}");
+//             });
+//             // Authentication successful
+//             print('User authenticated: ${userCredential.user?.email}');
 
-  void logout() {
-    FirebaseAuth.instance.signOut();
-    setState(() {
-      user = null;
-    });
-  }
+//             setState(() {
+//               user = userCredential.user;
+//             });
 
-  void authUser() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      try {
-        final email = emailController.text.trim();
-        final password = passController.text.trim();
-        UserCredential userCredential = await FirebaseAuth.instance
-            .signInWithEmailAndPassword(email: email, password: password);
-        // Authentication successful
-        setState(() {
-          user = userCredential.user;
-        });
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (context) => HomeScreen()));
-      } on FirebaseAuthException catch (e) {
-        final code = _parseFirebaseAuthExceptionMessage(input: e.message);
-        final forWeb = _errorHandleForWeb(e.toString());
+//             Navigator.pushReplacement(
+//                 context, MaterialPageRoute(builder: (context) => HomeScreen()));
+//           } catch (e) {
+//             // Sign up failed
+//             print('Sign up error: $e');
+//           }
+//         } else if (e.code == 'wrong-password') {
+//           showDialog(
+//             context: context,
+//             builder: (BuildContext dialogContext) {
+//               return AlertDialog(
+//                 title: const Text('Wrong Password'),
+//                 content: const Text('The password entered is incorrect.'),
+//                 actions: [
+//                   TextButton(
+//                     onPressed: () {
+//                       Navigator.of(dialogContext).pop();
+//                     },
+//                     child: const Text('OK'),
+//                   ),
+//                 ],
+//               );
+//             },
+//           );
+//         } else {
+//           // Other authentication errors
+//           // print('Authentication error: $e');
+//         }
+//       } catch (e) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(
+//             content: Text("Unknown error occurred"),
+//           ),
+//         );
+//       }
+//     }
+//   }
 
-        if (code == 'user-not-found' || forWeb == 'user-not-found') {
-          try {
-            final email = emailController.text.trim();
-            final password = passController.text.trim();
-            UserCredential userCredential =
-                await FirebaseAuth.instance.createUserWithEmailAndPassword(
-              email: email,
-              password: password,
-            );
-            // User signed up successfully
-            print('User signed up: ${userCredential.user?.email}');
-
-            FirebaseAuth.instance
-                .createUserWithEmailAndPassword(
-                    email: email, password: password)
-                .then((value) async {
-              print(
-                  "value: ${value} ${{'email': email, 'password': password}}");
-              userCredential = await FirebaseAuth.instance
-                  .signInWithEmailAndPassword(email: email, password: password);
-            }).catchError((err) {
-              print("ERROR CODE create: ${err}");
-            });
-            // Authentication successful
-            print('User authenticated: ${userCredential.user?.email}');
-
-            setState(() {
-              user = userCredential.user;
-            });
-
-            Navigator.pushReplacement(
-                context, MaterialPageRoute(builder: (context) => HomeScreen()));
-          } catch (e) {
-            // Sign up failed
-            print('Sign up error: $e');
-          }
-        } else if (e.code == 'wrong-password') {
-          showDialog(
-            context: context,
-            builder: (BuildContext dialogContext) {
-              return AlertDialog(
-                title: const Text('Wrong Password'),
-                content: const Text('The password entered is incorrect.'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                    },
-                    child: const Text('OK'),
-                  ),
-                ],
-              );
-            },
-          );
-        } else {
-          // Other authentication errors
-          // print('Authentication error: $e');
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Unknown error occurred"),
-          ),
-        );
-      }
-    }
-  }
-
-  Widget topWidget(double screenWidth) {
-    return Transform.rotate(
-      angle: -35 * math.pi / 180,
-      child: Container(
-        width: 1.2 * screenWidth,
-        height: 1.2 * screenWidth,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(150),
-          gradient: const LinearGradient(
-            begin: Alignment(-0.2, -0.8),
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0x007CBFCF),
-              Color(0xB316BFC4),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget bottomWidget(double screenWidth) {
-    return Container(
-      width: 1.5 * screenWidth,
-      height: 1.5 * screenWidth,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment(0.6, -1.1),
-          end: Alignment(0.7, 0.8),
-          colors: [
-            Color(0xDB4BE8CC),
-            Color(0x005CDBCF),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned(
-            top: -160,
-            left: -30,
-            child: topWidget(screenSize.width),
-          ),
-
-          Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                TextFormField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                  ),
-                  style: TextStyle(
-                    color: Colors.black,
-                  ),
-                  validator: validateEmail,
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: passController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                  ),
-                  style: TextStyle(
-                    color: Colors.black,
-                  ),
-                  validator: validatePassword,
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: authUser,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 40,
-                    ),
-                    child: Text(
-                      user != null ? 'Logout' : 'Login',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                if (user != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(
-                      'User is already signed in.',
-                      style: TextStyle(
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          Positioned(
-            bottom: -180,
-            left: -40,
-            child: bottomWidget(screenSize.width),
-          ),
-          // CenterWidget(size: screenSize),
-          // const LoginContent(),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       body: Column(
+//         children: [
+//           Expanded(
+//             child: Container(
+//               width: double.infinity,
+//               decoration: BoxDecoration(
+//                 color: Color(0xFF376AED),
+//               ),
+//               child: Padding(
+//                 padding: const EdgeInsets.all(20.0),
+//                 child: Stack(
+//                   children: [
+//                     Align(
+//                       alignment: Alignment.topLeft,
+//                       child: IconButton(
+//                         icon: Icon(Icons.arrow_back, color: Colors.white),
+//                         onPressed: () {
+//                           // Add your back button functionality here
+//                         },
+//                       ),
+//                     ),
+//                     Column(
+//                       crossAxisAlignment: CrossAxisAlignment.stretch,
+//                       children: [
+//                         SizedBox(height: 70),
+//                         Text(
+//                           'Sign In',
+//                           textAlign: TextAlign.center,
+//                           style: TextStyle(
+//                             color: Colors.white,
+//                             fontSize: 30,
+//                             fontFamily: 'Roboto',
+//                             fontWeight: FontWeight.w400,
+//                           ),
+//                         ),
+//                         SizedBox(height: 30),
+//                         Form(
+//                             key: _formKey,
+//                             child: Column(
+//                               children: [
+//                                 TextFormField(
+//                                   controller: emailController,
+//                                   decoration: InputDecoration(
+//                                     hintText: 'Email',
+//                                     filled: true,
+//                                     fillColor: Colors.white,
+//                                     border: OutlineInputBorder(
+//                                       borderRadius: BorderRadius.circular(12),
+//                                       borderSide: BorderSide.none,
+//                                     ),
+//                                   ),
+//                                 ),
+//                                 SizedBox(height: 20),
+//                                 TextFormField(
+//                                   controller: passController,
+//                                   decoration: InputDecoration(
+//                                     hintText: 'Password',
+//                                     filled: true,
+//                                     fillColor: Colors.white,
+//                                     border: OutlineInputBorder(
+//                                       borderRadius: BorderRadius.circular(12),
+//                                       borderSide: BorderSide.none,
+//                                     ),
+//                                   ),
+//                                   obscureText: true,
+//                                 ),
+//                               ],
+//                             )),
+//                         SizedBox(height: 20),
+//                         ElevatedButton(
+//                           onPressed: authUser,
+//                           child: Text(
+//                             'Sign In',
+//                             style: TextStyle(
+//                               fontSize: 18,
+//                             ),
+//                           ),
+//                           style: ElevatedButton.styleFrom(
+//                             primary: Color.fromARGB(255, 111, 147, 236),
+//                             shape: RoundedRectangleBorder(
+//                               borderRadius: BorderRadius.circular(12),
+//                             ),
+//                             padding: EdgeInsets.symmetric(
+//                               vertical: 15,
+//                             ),
+//                           ),
+//                         ),
+//                         SizedBox(height: 20),
+//                         TextButton(
+//                           onPressed: () {
+//                             // Add your "Create Account" button functionality here
+//                           },
+//                           child: Column(children: [
+//                             Text(
+//                               'Don’t have an account?',
+//                               style: TextStyle(
+//                                 color: Colors.white,
+//                               ),
+//                             ),
+//                             Text(
+//                               'Login with your email and password from here',
+//                               style: TextStyle(
+//                                 color: Colors.white,
+//                               ),
+//                             )
+//                           ]),
+//                         ),
+//                       ],
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }

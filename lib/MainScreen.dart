@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'AuthScreen.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({Key? key});
@@ -21,6 +21,7 @@ class MainScreenState extends State<MainScreen> {
 
   static const List<Widget> _widgetOptions = <Widget>[
     FriendListScreen(),
+    SearchScreen(),
     ProfileEditScreen(),
   ];
 
@@ -62,32 +63,28 @@ class MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _widgetOptions.elementAt(_selectedIndex),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SearchScreen(),
+        body: _widgetOptions.elementAt(_selectedIndex),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: ClipPath(
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: CurvedNavigationBar(
+              items: <Widget>[
+                Icon(
+                  Icons.home,
+                  size: 30,
+                  color: Colors.white,
+                ),
+                Icon(Icons.search, size: 30, color: Colors.white),
+                Icon(Icons.person, size: 30, color: Colors.white),
+              ],
+              onTap: _onItemTapped,
+              backgroundColor: Colors.white,
+              color: Colors.blue,
+              height: 50,
             ),
-          );
-        },
-        child: const Icon(Icons.refresh),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
+        ));
   }
 }
