@@ -58,11 +58,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (newUserCheck == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+    // if (newUserCheck == null) {
+    //   return const Center(
+    //     child: CircularProgressIndicator(),
+    //   );
+    // }
     return Container(
       color: Colors.white,
       child: Center(

@@ -80,7 +80,7 @@ class MainScreenState extends State<MainScreen> {
                 Icon(Icons.person, size: 30, color: Colors.white),
               ],
               onTap: _onItemTapped,
-              backgroundColor: Colors.white,
+              backgroundColor: const Color.fromARGB(0, 255, 255, 255),
               color: Colors.blue,
               height: 50,
             ),

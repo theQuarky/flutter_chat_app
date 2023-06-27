@@ -47,6 +47,10 @@ dependencies:
   cloud_functions: ^4.3.2
   download: ^1.0.0
   curved_navigation_bar: ^1.0.3
+  shimmer: ^3.0.0
+  url_launcher: ^6.1.11
+  full_screen_image: ^2.0.0
+  
 
 dev_dependencies:
   flutter_test:

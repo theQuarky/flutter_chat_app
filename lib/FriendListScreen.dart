@@ -1,8 +1,10 @@
 import 'package:chat_app/ChatScreen.dart';
 import 'package:chat_app/SearchScreen.dart';
+import 'package:chat_app/placeholder.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 class FriendListScreen extends StatefulWidget {
   const FriendListScreen({Key? key}) : super(key: key);
@@ -86,9 +88,13 @@ class _FriendListScreenState extends State<FriendListScreen> {
                   future: _firestore.collection('users').doc(friendId).get(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
+                      return Shimmer.fromColors(
+                          baseColor: Colors.grey.shade300,
+                          highlightColor: Colors.grey.shade100,
+                          enabled: true,
+                          child: ContentPlaceholder(
+                            lineType: ContentLineType.threeLines,
+                          ));
                     } else if (snapshot.hasError) {
                       return const Center(
                         child: Text('Something went wrong'),
@@ -141,6 +147,8 @@ class _FriendListScreenState extends State<FriendListScreen> {
                                 SizedBox(height: 5),
                                 Text(
                                   lastMessage,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
                                   style: const TextStyle(
                                       fontWeight: FontWeight.normal,
                                       fontSize: 12),

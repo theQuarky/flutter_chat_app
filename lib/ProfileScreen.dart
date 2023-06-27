@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:chat_app/AuthScreen.dart';
 import 'package:chat_app/MainScreen.dart';
+import 'package:chat_app/placeholder.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,6 +13,7 @@ import 'package:intl/intl.dart';
 // import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:shimmer/shimmer.dart';
 // import 'package:image_picker/image_picker.dart';
 
 enum Gender { male, female }
@@ -31,7 +33,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ImagePicker _picker = ImagePicker();
   String extension = '';
-  bool isNewUser = true;
+  bool? isNewUser = null;
   String url = '';
   // File? _selectedImage;
   html.Blob? _selectedImage;
@@ -42,7 +44,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     User? user = await FirebaseAuth.instance.currentUser;
     DocumentSnapshot doc =
         await _firestore.collection('users').doc(user?.uid).get();
-    if (doc.data() == null) return;
+    if (doc.data() == null) {
+      setState(() {
+        isNewUser = true;
+      });
+      return;
+    }
+    ;
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     if (data.isNotEmpty) {
       setState(() {
@@ -191,7 +199,35 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print(url);
+    if (isNewUser == null) {
+      return Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          enabled: true,
+          child: Column(
+            children: [
+              BannerPlaceholder(),
+              TitlePlaceholder(width: double.infinity),
+              SizedBox(height: 16.0),
+              ContentPlaceholder(
+                lineType: ContentLineType.threeLines,
+              ),
+              SizedBox(height: 16.0),
+              TitlePlaceholder(width: 200.0),
+              SizedBox(height: 16.0),
+              ContentPlaceholder(
+                lineType: ContentLineType.twoLines,
+              ),
+              SizedBox(height: 16.0),
+              TitlePlaceholder(width: 200.0),
+              SizedBox(height: 16.0),
+              ContentPlaceholder(
+                lineType: ContentLineType.twoLines,
+              ),
+            ],
+          ));
+    }
+
     return Scaffold(
       body: Container(
         color: Colors.white,

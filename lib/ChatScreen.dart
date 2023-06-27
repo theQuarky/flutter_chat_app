@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:full_screen_image/full_screen_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -290,6 +290,27 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  void showPopupMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Block Friend'),
+                onTap: () {
+                  Navigator.pop(context, 'Add');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((selectedValue) {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -356,37 +377,47 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       color: Colors.grey[200],
       child: Container(
-        decoration: BoxDecoration(
-          color: Color.fromARGB(255, 163, 163, 163),
-          borderRadius: BorderRadius.circular(25.0),
-        ),
-        child: Row(
-          children: [
-            IconButton(
-              icon: Icon(Icons.image),
-              onPressed: _pickImageFromGallery,
-            ),
-            Expanded(
-              child: TextField(
-                controller: _messageController,
-                onSubmitted: (e) => sendMessage(),
-                decoration: InputDecoration.collapsed(
-                  hintText: 'Type a message',
+          decoration: BoxDecoration(
+            color: Color.fromARGB(255, 163, 163, 163),
+            borderRadius: BorderRadius.circular(25.0),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.image),
+                onPressed: _pickImageFromGallery,
+              ),
+              Expanded(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: 200, // Set the maximum height here
+                  ),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: _messageController,
+                        maxLines:
+                            null, // Allow the text field to have multiple lines
+                        minLines: 1, // Set the minimum lines to 1
+                        onSubmitted: (e) => sendMessage(),
+                        decoration: InputDecoration.collapsed(
+                          hintText: 'Type a message',
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            IconButton(
-              icon: Icon(Icons.send),
-              onPressed: () {
-                // Send message logic goes here
-                // String message = _messageController.text;
-                sendMessage();
-                _messageController.clear();
-              },
-            ),
-          ],
-        ),
-      ),
+              IconButton(
+                icon: Icon(Icons.send),
+                onPressed: () {
+                  sendMessage();
+                  _messageController.clear();
+                },
+              ),
+            ],
+          )),
     );
   }
 
@@ -414,9 +445,20 @@ class _ChatScreenState extends State<ChatScreen> {
             SizedBox(
               width: 2,
             ),
-            CircleAvatar(
-              backgroundImage: Image.network(partner?['image'] ?? "").image,
-              maxRadius: 20,
+            Container(
+              decoration:
+                  BoxDecoration(borderRadius: BorderRadius.circular(20)),
+              child: FullScreenWidget(
+                disposeLevel: DisposeLevel.High,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CircleAvatar(
+                    backgroundImage:
+                        Image.network(partner?['image'] ?? "").image,
+                    maxRadius: 20,
+                  ),
+                ),
+              ),
             ),
             SizedBox(
               width: 12,
@@ -441,7 +483,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             IconButton(
                 onPressed: () {
-                  // showPopupMenu(context);
+                  showPopupMenu(context);
                 },
                 icon: Icon(
                   Icons.settings,
@@ -508,26 +550,6 @@ class _ChatScreenState extends State<ChatScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: _buildMessageInput(),
-            //  Row(
-            //   children: [
-            //     IconButton(
-            //       onPressed: () {},
-            //       icon: const Icon(Icons.add),
-            //     ),
-            //     Expanded(
-            //       child: TextField(
-            //         controller: _messageController,
-            //         decoration: const InputDecoration(
-            //           hintText: 'Enter Message',
-            //         ),
-            //       ),
-            //     ),
-            //     IconButton(
-            //       onPressed: sendMessage,
-            //       icon: const Icon(Icons.send),
-            //     ),
-            //   ],
-            // ),
           ),
         ],
       ),

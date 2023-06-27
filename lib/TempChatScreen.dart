@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:html' as html;
-import 'dart:io';
 import 'package:chat_app/HomeScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:full_screen_image/full_screen_image.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
+
+import 'package:url_launcher/url_launcher.dart';
 
 class TempChatScreen extends StatefulWidget {
   final tempChatDocId;
@@ -381,10 +381,24 @@ class _TempChatScreenState extends State<TempChatScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter Message',
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxHeight: 200, // Set the maximum height here
+                    ),
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextField(
+                          controller: _messageController,
+                          maxLines:
+                              null, // Allow the text field to have multiple lines
+                          minLines: 1, // Set the minimum lines to 1
+                          onSubmitted: (e) => sendMessage(),
+                          decoration: InputDecoration.collapsed(
+                            hintText: 'Type a message',
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -415,6 +429,14 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // String? url;
+    // dynamic body;
+    // if (text is String) url = isUrl(text);
+    // if (url != null) {
+    //   body = fetchLinkPreview(url);
+    // }
+
+    // print(body);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Align(
@@ -429,15 +451,33 @@ class ChatBubble extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               text is String
-                  ? Text(
-                      text,
-                      style: TextStyle(
-                        color: isUserMessage ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w500,
+                  ? Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.7,
+                      ),
+                      child: Text(
+                        text,
+                        style: TextStyle(
+                          color: isUserMessage ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     )
-                  : (text['type'] == 'image'
-                      ? Image.network(text['image'])
+                  : (text['isImage']
+                      ? FullScreenWidget(
+                          disposeLevel: DisposeLevel.High,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: 200,
+                              height: 200,
+                              child: Image.network(
+                                text['image'],
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        )
                       : Container(
                           width: 200,
                           height: 200,
@@ -497,6 +537,28 @@ void _downloadFile(BuildContext context, String url) async {
     );
   }
 }
+
+Future<void> fetchLinkPreview(String url) async {
+  // ignore: deprecated_member_use
+  if (await canLaunch(url)) {
+    final dynamic response =
+        await launch(url, forceWebView: true, enableJavaScript: true);
+    print(response);
+    // Extract the necessary metadata from the response object
+    // and update your UI accordingly.
+  } else {
+    print("Error");
+    // Handle error: unable to launch the URL.
+  }
+}
+
+String? isUrl(String text) {
+  final urlPattern = r'(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+\.[\w/\-?=%.]+';
+  final match = RegExp(urlPattern).firstMatch(text);
+  if (match != null) return match.group(0);
+  return null; // Output: https://example.com
+}
+
 
 // void _downloadFile(BuildContext context, String url) async {
 //   try {

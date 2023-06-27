@@ -225,19 +225,6 @@ class _SearchScreenState extends State<SearchScreen>
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () async {
-              clean();
-              // ignore: use_build_context_synchronously
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => const MainScreen()));
-            },
-            child: const Text('Exit'),
-          ),
-          const SizedBox(
-            height: 20,
-          ),
         ],
       ),
     );
