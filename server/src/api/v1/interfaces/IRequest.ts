@@ -1,4 +1,4 @@
-import { Request } from 'npm:express';
+import { Request } from 'express';
 import IUser from './IUser.ts';
 
 

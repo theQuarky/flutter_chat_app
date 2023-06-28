@@ -1,4 +1,4 @@
-import express, { Application, Request, Response, NextFunction } from "npm:express";
+import express, { Application, Request, Response, NextFunction } from "express";
 import mongoose from "npm:mongoose";
 import helmet from "npm:helmet";
 import morgan from "npm:morgan";

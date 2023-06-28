@@ -1,4 +1,4 @@
-import { NextFunction, RequestHandler } from "npm:express";
+import { NextFunction, RequestHandler } from "express";
 import IRequest from "../interfaces/IRequest.ts";
 import IResponse from "../interfaces/IResponse.ts";
 import _ from "npm:lodash";
