@@ -1,5 +1,5 @@
-import IResponse from "../interfaces/IResponse";
-import IRequest from "../interfaces/IRequest";
+import IResponse from "../interfaces/IResponse.ts";
+import IRequest from "../interfaces/IRequest.ts";
 import { RequestHandler } from "express";
 
 export const addUserController: RequestHandler = async (

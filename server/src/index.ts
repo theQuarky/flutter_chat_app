@@ -1,7 +1,7 @@
-import app from './App';
-import http from 'http';
+import app from './App.ts';
+import * as http from 'node:http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import configureSocketServer from './socketServer';
+import configureSocketServer from './socketServer.ts';
 
 const server = http.createServer(app);
 const io = new SocketIOServer(server,{

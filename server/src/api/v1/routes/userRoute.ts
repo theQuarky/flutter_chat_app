@@ -1,7 +1,7 @@
 import { Router } from "express";
 
-import * as userServices from "../services/userServices";
-import * as userController from "../controllers/userControllers";
+import * as userServices from "../services/userServices.ts";
+import * as userController from "../controllers/userControllers.ts";
 const user: Router = Router();
 
 user.post("/insert", [

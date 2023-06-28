@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import IUser from "../interfaces/IUser";
+import IUser from "../interfaces/IUser.ts";
 
 const UserSchema: Schema = new Schema(
   {

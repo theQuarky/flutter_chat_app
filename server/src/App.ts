@@ -3,11 +3,11 @@ import mongoose from "mongoose";
 import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
-import cors from "cors";
-import apiV1 from "./api/v1";
+// import cors from "node:cors";
+import apiV1 from "./api/v1/index.ts";
 import YAML from 'yamljs';
-import IRequest from "./api/v1/interfaces/IRequest";
-import IResponse from "./api/v1/interfaces/IResponse";
+import IRequest from "./api/v1/interfaces/IRequest.ts";
+import IResponse from "./api/v1/interfaces/IResponse.ts";
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
@@ -27,9 +27,9 @@ class App {
   }
 
   private connectToDatabase(): void {
-    if (process.env.DB_URL) {
+    if (Deno.env.get("DB_URL")) {
       mongoose
-        .connect(process.env.DB_URL)
+        .connect(Deno.env.get("DB_URL"))
         .then(() => {
           console.log("Connected to MongoDB");
         })
@@ -41,7 +41,7 @@ class App {
 
   private configureMiddleware(): void {
     this.app.use(express.json());
-    this.app.use(cors());
+    // this.app.use(cors());
     this.app.use(helmet()); // Security-related middleware
     this.app.use(morgan("combined")); // Logging middleware
     this.showReqBody();
