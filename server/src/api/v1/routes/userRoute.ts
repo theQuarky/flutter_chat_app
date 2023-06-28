@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router } from "npm:express";
 
 import * as userServices from "../services/userServices.ts";
 import * as userController from "../controllers/userControllers.ts";

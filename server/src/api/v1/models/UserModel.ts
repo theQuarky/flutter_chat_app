@@ -1,4 +1,4 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema } from "npm:mongoose";
 import IUser from "../interfaces/IUser.ts";
 
 const UserSchema: Schema = new Schema(

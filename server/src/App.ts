@@ -1,19 +1,16 @@
-import express, { Application, Request, Response, NextFunction } from "express";
-import mongoose from "mongoose";
-import helmet from "helmet";
-import morgan from "morgan";
-import dotenv from "dotenv";
+import express, { Application, Request, Response, NextFunction } from "npm:express";
+import mongoose from "npm:mongoose";
+import helmet from "npm:helmet";
+import morgan from "npm:morgan";
 // import cors from "node:cors";
 import apiV1 from "./api/v1/index.ts";
 import * as jsYamlPort from "https://deno.land/x/js_yaml_port@3.14.0/js-yaml.js";
 import IRequest from "./api/v1/interfaces/IRequest.ts";
 import IResponse from "./api/v1/interfaces/IResponse.ts";
-import swaggerJsdoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'npm:swagger-jsdoc';
+import swaggerUi from 'npm:swagger-ui-express';
 
 const swaggerDocument = jsYamlPort.load('api.yml');
-
-dotenv.config();
 
 class App {
   private app: Application;

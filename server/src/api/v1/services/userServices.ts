@@ -1,7 +1,7 @@
-import { NextFunction, RequestHandler } from "express";
+import { NextFunction, RequestHandler } from "npm:express";
 import IRequest from "../interfaces/IRequest.ts";
 import IResponse from "../interfaces/IResponse.ts";
-import _ from "lodash";
+import _ from "npm:lodash";
 import UserModal from "../models/UserModel.ts";
 import IUser from "../interfaces/IUser.ts";
 
