@@ -1,16 +1,19 @@
 import express, { Application, Request, Response, NextFunction } from "express";
-import mongoose from "npm:mongoose";
-import helmet from "npm:helmet";
-import morgan from "npm:morgan";
-// import cors from "node:cors";
-import apiV1 from "./api/v1/index.ts";
-import * as jsYamlPort from "https://deno.land/x/js_yaml_port@3.14.0/js-yaml.js";
-import IRequest from "./api/v1/interfaces/IRequest.ts";
-import IResponse from "./api/v1/interfaces/IResponse.ts";
-import swaggerJsdoc from 'npm:swagger-jsdoc';
-import swaggerUi from 'npm:swagger-ui-express';
+import mongoose from "mongoose";
+import helmet from "helmet";
+import morgan from "morgan";
+import dotenv from "dotenv";
+import cors from "cors";
+import apiV1 from "./api/v1";
+import YAML from 'yamljs';
+import IRequest from "./api/v1/interfaces/IRequest";
+import IResponse from "./api/v1/interfaces/IResponse";
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 
-const swaggerDocument = jsYamlPort.load('api.yml');
+const swaggerDocument = YAML.load('api.yml');
+
+dotenv.config();
 
 class App {
   private app: Application;
@@ -24,9 +27,9 @@ class App {
   }
 
   private connectToDatabase(): void {
-    if (Deno.env.get("DB_URL")) {
+    if (process.env.DB_URL) {
       mongoose
-        .connect(Deno.env.get("DB_URL"))
+        .connect(process.env.DB_URL)
         .then(() => {
           console.log("Connected to MongoDB");
         })
@@ -38,7 +41,7 @@ class App {
 
   private configureMiddleware(): void {
     this.app.use(express.json());
-    // this.app.use(cors());
+    this.app.use(cors());
     this.app.use(helmet()); // Security-related middleware
     this.app.use(morgan("combined")); // Logging middleware
     this.showReqBody();

@@ -1,9 +1,9 @@
 import { NextFunction, RequestHandler } from "express";
-import IRequest from "../interfaces/IRequest.ts";
-import IResponse from "../interfaces/IResponse.ts";
-import _ from "npm:lodash";
-import UserModal from "../models/UserModel.ts";
-import IUser from "../interfaces/IUser.ts";
+import IRequest from "../interfaces/IRequest";
+import IResponse from "../interfaces/IResponse";
+import _ from "lodash";
+import UserModal from "../models/UserModel";
+import IUser from "../interfaces/IUser";
 
 export const validateInsertData: RequestHandler = async (
   req: IRequest,
