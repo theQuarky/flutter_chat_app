@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "socket.io": "https://cdn.skypack.dev/socket.io"
+  }
+}
