@@ -5,13 +5,13 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 // import cors from "node:cors";
 import apiV1 from "./api/v1/index.ts";
-import YAML from 'yamljs';
+import * as jsYamlPort from "https://deno.land/x/js_yaml_port@3.14.0/js-yaml.js";
 import IRequest from "./api/v1/interfaces/IRequest.ts";
 import IResponse from "./api/v1/interfaces/IResponse.ts";
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
-const swaggerDocument = YAML.load('api.yml');
+const swaggerDocument = jsYamlPort.load('api.yml');
 
 dotenv.config();
 
