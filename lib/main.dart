@@ -1,15 +1,11 @@
-import 'package:chat_app/ChatScreen.dart';
-import 'package:chat_app/ProfileScreen.dart';
-import 'package:chat_app/SearchScreen.dart';
-import 'package:chat_app/TempScreen.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'screens/Home/HomeScreen.dart';
 import 'AuthScreen.dart';
-import 'HomeScreen.dart';
 import 'firebase_options.dart';
+import 'screens/Profile/ProfileEditScreen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,84 +15,56 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  MyApp({Key? key}) : super(key: key);
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      navigatorKey: navigatorKey,
+      title: 'Chat App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: AppBarTheme(
+          color: Colors.white,
+          elevation: 0,
+          iconTheme: IconThemeData(color: Colors.black),
+          titleTextStyle: TextStyle(
+              color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
       ),
-      home: FutureBuilder<User?>(
-        future: FirebaseAuth.instance.authStateChanges().first,
-        builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
-          } else {
-            final isLoggedIn = snapshot.hasData;
-            final initialRoute = isLoggedIn ? '/home' : '/auth';
-            return HomeWrapper(
-              initialRoute: initialRoute,
-              currentUser: snapshot.data,
-            );
-          }
-        },
-      ),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => AuthWrapper(),
+        '/home': (context) => HomeScreen(),
+        '/auth': (context) => AuthScreen(),
+        '/profile': (context) => ProfileEditScreen(),
+      },
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: Text('Route not found!'),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-class HomeWrapper extends StatelessWidget {
-  final String initialRoute;
-  final User? currentUser;
-
-  const HomeWrapper({
-    Key? key,
-    required this.initialRoute,
-    required this.currentUser,
-  }) : super(key: key);
-
+class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return IndexedStack(
-      index: _getRouteIndex(initialRoute),
-      children: <Widget>[
-        const HomeScreen(),
-        const AuthScreen(),
-        const SearchScreen(),
-        const ProfileEditScreen(),
-        if (initialRoute == '/chat')
-          ChatScreen(partnerId: getPartnerIdFromRoute(context)),
-      ],
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircularProgressIndicator();
+        } else if (snapshot.hasData) {
+          return HomeScreen();
+        } else {
+          return AuthScreen();
+        }
+      },
     );
-  }
-
-  int _getRouteIndex(String route) {
-    switch (route) {
-      case '/home':
-        return 0;
-      case '/auth':
-        return 1;
-      case '/search':
-        return 2;
-      case '/profile':
-        return 3;
-      case '/chat':
-        return 5;
-      default:
-        return 0;
-    }
-  }
-
-  String getPartnerIdFromRoute(BuildContext context) {
-    final arguments = ModalRoute.of(context)?.settings.arguments;
-    if (arguments is String) {
-      return arguments;
-    }
-    return '';
   }
 }

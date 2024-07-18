@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "327775764664",
+    "firebase_url": "https://flutter-c91c8-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "flutter-c91c8",
     "storage_bucket": "flutter-c91c8.appspot.com"
   },
@@ -31,10 +32,10 @@
               "client_type": 3
             },
             {
-              "client_id": "327775764664-6invcpmr9ksvr6r58egnq6r896vu2a34.apps.googleusercontent.com",
+              "client_id": "327775764664-1d1bsiv8nvo3c0clk8c3kgtap2uin8v9.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.withFire"
+                "bundle_id": "com.example.nativeChatApp"
               }
             }
           ]
@@ -67,10 +68,10 @@
               "client_type": 3
             },
             {
-              "client_id": "327775764664-6invcpmr9ksvr6r58egnq6r896vu2a34.apps.googleusercontent.com",
+              "client_id": "327775764664-1d1bsiv8nvo3c0clk8c3kgtap2uin8v9.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.withFire"
+                "bundle_id": "com.example.nativeChatApp"
               }
             }
           ]
@@ -103,10 +104,10 @@
               "client_type": 3
             },
             {
-              "client_id": "327775764664-6invcpmr9ksvr6r58egnq6r896vu2a34.apps.googleusercontent.com",
+              "client_id": "327775764664-1d1bsiv8nvo3c0clk8c3kgtap2uin8v9.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.withFire"
+                "bundle_id": "com.example.nativeChatApp"
               }
             }
           ]
@@ -139,10 +140,46 @@
               "client_type": 3
             },
             {
-              "client_id": "327775764664-6invcpmr9ksvr6r58egnq6r896vu2a34.apps.googleusercontent.com",
+              "client_id": "327775764664-1d1bsiv8nvo3c0clk8c3kgtap2uin8v9.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.withFire"
+                "bundle_id": "com.example.nativeChatApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:327775764664:android:49b1b47aa3cd834a59344d",
+        "android_client_info": {
+          "package_name": "com.example.native_chat_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "327775764664-a2pvig49hbac7j24r6lendkvt4qcd3ah.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDf5YW44ebirOb4CQU2TOkGA_cFcq2LEE0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "327775764664-a2pvig49hbac7j24r6lendkvt4qcd3ah.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "327775764664-1d1bsiv8nvo3c0clk8c3kgtap2uin8v9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nativeChatApp"
               }
             }
           ]
@@ -175,10 +212,10 @@
               "client_type": 3
             },
             {
-              "client_id": "327775764664-6invcpmr9ksvr6r58egnq6r896vu2a34.apps.googleusercontent.com",
+              "client_id": "327775764664-1d1bsiv8nvo3c0clk8c3kgtap2uin8v9.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.withFire"
+                "bundle_id": "com.example.nativeChatApp"
               }
             }
           ]

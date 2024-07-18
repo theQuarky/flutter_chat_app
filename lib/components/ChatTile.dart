@@ -1,4 +1,4 @@
-import 'package:chat_app/ChatScreen.dart';
+import 'package:chat_app/screens/Home/HomeScreen.dart';
 import 'package:flutter/material.dart';
 
 class ChatTile extends StatelessWidget {
@@ -23,7 +23,7 @@ class ChatTile extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ChatScreen(partnerId: friendId),
+          builder: (context) => HomeScreen(),
         ),
       ),
       child: ListTile(

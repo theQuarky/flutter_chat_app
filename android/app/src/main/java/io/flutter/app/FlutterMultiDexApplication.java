@@ -22,4 +22,10 @@ public class FlutterMultiDexApplication extends Application {
     super.attachBaseContext(base);
     MultiDex.install(this);
   }
+
+  @Override
+  public void onCreate() {
+      super.onCreate();
+      MultiDex.install(this);
+  }
 }

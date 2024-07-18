@@ -27,10 +27,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.macOS:
         return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -49,6 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '327775764664',
     projectId: 'flutter-c91c8',
     authDomain: 'flutter-c91c8.firebaseapp.com',
+    databaseURL: 'https://flutter-c91c8-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'flutter-c91c8.appspot.com',
     measurementId: 'G-V327W8PRSZ',
   );
@@ -58,6 +56,7 @@ class DefaultFirebaseOptions {
     appId: '1:327775764664:android:467af3283cb965d059344d',
     messagingSenderId: '327775764664',
     projectId: 'flutter-c91c8',
+    databaseURL: 'https://flutter-c91c8-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'flutter-c91c8.appspot.com',
   );
 
@@ -66,6 +65,7 @@ class DefaultFirebaseOptions {
     appId: '1:327775764664:ios:dbea90814185020459344d',
     messagingSenderId: '327775764664',
     projectId: 'flutter-c91c8',
+    databaseURL: 'https://flutter-c91c8-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'flutter-c91c8.appspot.com',
     iosClientId: '327775764664-n9faega4pj87gt6ovr4qvhq8uusrkumh.apps.googleusercontent.com',
     iosBundleId: 'com.example.chatApp',
@@ -76,8 +76,21 @@ class DefaultFirebaseOptions {
     appId: '1:327775764664:ios:dbea90814185020459344d',
     messagingSenderId: '327775764664',
     projectId: 'flutter-c91c8',
+    databaseURL: 'https://flutter-c91c8-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'flutter-c91c8.appspot.com',
     iosClientId: '327775764664-n9faega4pj87gt6ovr4qvhq8uusrkumh.apps.googleusercontent.com',
     iosBundleId: 'com.example.chatApp',
   );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCUoIB-Ng-im33Ii9B9O49MjGkSFJsHoJw',
+    appId: '1:327775764664:web:174be248f1dd3e6459344d',
+    messagingSenderId: '327775764664',
+    projectId: 'flutter-c91c8',
+    authDomain: 'flutter-c91c8.firebaseapp.com',
+    databaseURL: 'https://flutter-c91c8-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'flutter-c91c8.appspot.com',
+    measurementId: 'G-K744E64FQ9',
+  );
+
 }
