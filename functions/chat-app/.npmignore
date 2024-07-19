@@ -1,0 +1,8 @@
+# .npmignore
+tests/
+*.test.js
+*.spec.js
+*.d.ts
+tsconfig.json
+.eslintrc.js
+.prettierrc

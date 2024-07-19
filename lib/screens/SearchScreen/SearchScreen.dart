@@ -19,7 +19,6 @@ class _SearchScreenState extends State<SearchScreen>
   late Animation<double> _scaleAnimation;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final MatchService _matchService = MatchService();
-  StreamSubscription<QuerySnapshot>? _matchListener;
   Timer? _matchCheckTimer;
   bool _isSearching = false;
   String? _userId;
@@ -104,45 +103,23 @@ class _SearchScreenState extends State<SearchScreen>
     });
 
     try {
-      final userDoc = await _firestore.collection('users').doc(_userId).get();
-      final userData = userDoc.data() ?? {};
-
-      // All fields are now optional
-      final gender = userData['gender'] as String?;
-      final birthdate = userData['birthdate'] as Timestamp?;
-
-      // Get location if not already available
-      if (_currentPosition == null) {
-        bool locationObtained = await _getCurrentLocation();
-        if (!locationObtained) {
-          print("Couldn't obtain location, but continuing with search");
-        }
-      }
-
-      // Prepare queue data with all fields optional
+      // Prepare queue data
       Map<String, dynamic> queueData = {
         'userId': _userId,
         'timestamp': FieldValue.serverTimestamp(),
       };
 
-      if (gender != null) queueData['gender'] = gender;
-      if (birthdate != null) queueData['birthdate'] = birthdate;
       if (_currentPosition != null) {
         queueData['latitude'] = _currentPosition!.latitude;
         queueData['longitude'] = _currentPosition!.longitude;
       }
 
+      // Add user to match queue
       await _firestore.collection('matchQueue').add(queueData);
-      print("Successfully added to matchQueue");
+      print("Successfully added to matchQueue with data: $queueData");
 
-      // Listen for a match
-      _listenForMatch();
-
-      // Try to find a match
-      _findMatch();
-
-      // Start a periodic match check
-      _matchCheckTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+      // Start periodic match checking
+      _matchCheckTimer = Timer.periodic(Duration(seconds: 5), (timer) {
         if (_isSearching) {
           _findMatch();
         } else {
@@ -160,25 +137,6 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
-  void _listenForMatch() {
-    _matchListener = _firestore
-        .collection('matches')
-        .doc(_userId)
-        .collection('userMatches')
-        .snapshots()
-        .listen((snapshot) {
-      for (var change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          final matchData = change.doc.data();
-          if (matchData != null) {
-            final matchedUserId = matchData['matchedUserId'] as String;
-            _onMatchFound(matchedUserId);
-          }
-        }
-      }
-    });
-  }
-
   void _findMatch() async {
     if (_userId == null) return;
 
@@ -187,7 +145,6 @@ class _SearchScreenState extends State<SearchScreen>
       _onMatchFound(matchedUserId);
     } else {
       print('No match found at this time.');
-      // The user remains in the queue for the next check
     }
   }
 
@@ -202,7 +159,6 @@ class _SearchScreenState extends State<SearchScreen>
     setState(() {
       _isSearching = false;
     });
-    _matchListener?.cancel();
     _matchCheckTimer?.cancel();
     if (_userId != null) {
       _firestore
@@ -220,7 +176,6 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void dispose() {
     _animationController.dispose();
-    _matchListener?.cancel();
     _matchCheckTimer?.cancel();
     stopSearch();
     super.dispose();

@@ -60,7 +60,25 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return CircularProgressIndicator();
         } else if (snapshot.hasData) {
-          return HomeScreen();
+          return FutureBuilder<DataSnapshot>(
+            future: FirebaseDatabase.instance
+                .ref()
+                .child('users')
+                .child(snapshot.data!.uid)
+                .get(),
+            builder: (context, profileSnapshot) {
+              if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator();
+              } else if (profileSnapshot.hasData &&
+                  profileSnapshot.data!.value != null) {
+                // User profile exists, navigate to HomeScreen
+                return HomeScreen();
+              } else {
+                // User profile doesn't exist, navigate to ProfileEditScreen
+                return ProfileEditScreen();
+              }
+            },
+          );
         } else {
           return AuthScreen();
         }

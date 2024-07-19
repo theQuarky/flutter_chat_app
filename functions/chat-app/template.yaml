@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Chat Matching Service
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  AddToMatchQueueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.addToMatchQueueHandler
+      Runtime: nodejs20.x
+      Timeout: 300
+      MemorySize: 524
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: '*'
+      Events:
+        AddToMatchQueue:
+          Type: Api
+          Properties:
+            Path: /addToMatchQueue
+            Method: post
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - app.ts
+  RemoveFromMatchQueueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.removeFromMatchQueueHandler
+      Runtime: nodejs20.x
+      Events:
+        RemoveFromMatchQueue:
+          Type: Api
+          Properties:
+            Path: /removeFromMatchQueue
+            Method: post
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - app.ts
+  # FindMatchesFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: go-function/
+  #     Handler: main
+  #     Runtime: provided.al2023
+  #     Events:
+  #       Schedule:
+  #         Type: Schedule
+  #         Properties:
+  #           Schedule: rate(1 minute)
+
+Outputs:
+  AddToMatchQueueApi:
+    Description: "API Gateway endpoint URL for Add to Match Queue function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/addToMatchQueue/"
+  RemoveFromMatchQueueApi:
+    Description: "API Gateway endpoint URL for Remove from Match Queue function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/removeFromMatchQueue/"

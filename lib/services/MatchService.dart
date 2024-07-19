@@ -8,49 +8,33 @@ class MatchService {
 
   Future<String?> findMatch(String userId) async {
     try {
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      final userData = userDoc.data() ?? {};
-
       final queueSnapshot = await _firestore
           .collection('matchQueue')
           .where('userId', isNotEqualTo: userId)
           .get();
 
-      if (queueSnapshot.docs.isNotEmpty) {
-        List<Map<String, dynamic>> potentialMatches = [];
-
-        for (var doc in queueSnapshot.docs) {
-          final potentialMatch = doc.data();
-          // Remove gender check to allow all matches
-          double score = calculateMatchScore(userData, potentialMatch);
-          potentialMatches.add({
-            ...potentialMatch,
-            'score': score,
-            'docId': doc.id,
-          });
-        }
-
-        potentialMatches.sort((a, b) {
-          double scoreA = a['score'] as double;
-          double scoreB = b['score'] as double;
-          return scoreB.compareTo(scoreA);
-        });
-
-        if (potentialMatches.isNotEmpty) {
-          final bestMatch = potentialMatches.first;
-          final bestMatchUserId = bestMatch['userId'] as String?;
-          final bestMatchDocId = bestMatch['docId'] as String?;
-          final bestScore = bestMatch['score'] as double?;
-
-          if (bestMatchUserId != null &&
-              bestMatchDocId != null &&
-              bestScore != null) {
-            await _removeFromQueue(userId, bestMatchUserId, bestMatchDocId);
-            await _createMatch(userId, bestMatchUserId, bestScore);
-            return bestMatchUserId;
-          }
-        }
+      if (queueSnapshot.docs.isEmpty) {
+        print('No other users in the match queue.');
+        return null;
       }
+
+      // Simply choose the first available user in the queue
+      final matchedUser = queueSnapshot.docs.first;
+      final matchedUserId = matchedUser['userId'] as String?;
+      final matchedDocId = matchedUser.id;
+
+      if (matchedUserId != null) {
+        // Calculate score for logging purposes, but don't use it for matching
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        final userData = userDoc.data() ?? {};
+        double score = calculateMatchScore(userData, matchedUser.data());
+
+        await _removeFromQueue(userId, matchedUserId, matchedDocId);
+        await _createMatch(userId, matchedUserId, score);
+        print('Match found with user: $matchedUserId, score: $score');
+        return matchedUserId;
+      }
+
       print('No suitable match found at this time.');
       return null;
     } catch (e) {

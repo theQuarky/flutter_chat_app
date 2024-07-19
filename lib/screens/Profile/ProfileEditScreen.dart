@@ -29,6 +29,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   dynamic _imageFile;
   String? _imageUrl;
   Uint8List? _webImage;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -80,6 +81,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         String? imageUrl = _imageUrl;
@@ -103,9 +108,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           'profileCompleted': true,
         }, SetOptions(merge: true));
 
-        Navigator.of(context).pop();
+        setState(() {
+          _isLoading = false;
+        });
+        Navigator.of(context).pushReplacementNamed('/home');
       }
     }
+  }
+
+  bool _isOver18(DateTime birthDate) {
+    final today = DateTime.now();
+    final difference = today.difference(birthDate).inDays;
+    return difference >=
+        6570; // 6570 days = 18 years (accounting for leap years)
   }
 
   @override
@@ -116,97 +131,157 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.save),
-            onPressed: _saveProfile,
+            onPressed: _isLoading ? null : _saveProfile,
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey[200],
-                    backgroundImage: _getImageProvider(),
-                    child: _imageFile == null &&
-                            _webImage == null &&
-                            _imageUrl == null
-                        ? Icon(Icons.add_a_photo,
-                            size: 50, color: Colors.grey[600])
-                        : null,
-                  ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _isLoading ? null : _pickImage,
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage: _getImageProvider(),
+                        child: _imageFile == null &&
+                                _webImage == null &&
+                                _imageUrl == null
+                            ? Icon(Icons.add_a_photo,
+                                size: 50, color: Colors.grey[600])
+                            : null,
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Display Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      enabled: !_isLoading,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a display name';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    TextFormField(
+                      controller: _bioController,
+                      decoration: InputDecoration(
+                        labelText: 'Bio',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      enabled: !_isLoading,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a bio';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    FormField<DateTime>(
+                      initialValue: _birthDate,
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select your birth date';
+                        }
+                        if (!_isOver18(value)) {
+                          return 'You must be 18 years or older';
+                        }
+                        return null;
+                      },
+                      builder: (FormFieldState<DateTime> state) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ListTile(
+                              title: Text(_birthDate == null
+                                  ? 'Select Birth Date'
+                                  : 'Birth Date: ${_birthDate!.toLocal().toString().split(' ')[0]}'),
+                              trailing: Icon(Icons.calendar_today),
+                              enabled: !_isLoading,
+                              onTap: () async {
+                                final DateTime? picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _birthDate ??
+                                      DateTime.now()
+                                          .subtract(Duration(days: 6570)),
+                                  firstDate: DateTime(1900),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null && picked != _birthDate) {
+                                  setState(() {
+                                    _birthDate = picked;
+                                  });
+                                  state.didChange(picked);
+                                }
+                              },
+                            ),
+                            if (state.hasError)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 16, top: 8),
+                                child: Text(
+                                  state.errorText!,
+                                  style: TextStyle(
+                                      color: Colors.red, fontSize: 12),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _gender,
+                      decoration: InputDecoration(
+                        labelText: 'Gender',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: ['Male', 'Female'].map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: _isLoading
+                          ? null
+                          : (newValue) {
+                              setState(() {
+                                _gender = newValue;
+                              });
+                            },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a gender';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
-                SizedBox(height: 24),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Display Name',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a display name';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-                TextFormField(
-                  controller: _bioController,
-                  decoration: InputDecoration(
-                    labelText: 'Bio',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                SizedBox(height: 16),
-                ListTile(
-                  title: Text(_birthDate == null
-                      ? 'Select Birth Date'
-                      : 'Birth Date: ${_birthDate!.toLocal().toString().split(' ')[0]}'),
-                  trailing: Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: _birthDate ?? DateTime.now(),
-                      firstDate: DateTime(1900),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null && picked != _birthDate) {
-                      setState(() {
-                        _birthDate = picked;
-                      });
-                    }
-                  },
-                ),
-                SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _gender,
-                  decoration: InputDecoration(
-                    labelText: 'Gender',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: ['Male', 'Female'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _gender = newValue;
-                    });
-                  },
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
     );
   }

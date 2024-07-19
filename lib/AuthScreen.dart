@@ -46,10 +46,7 @@ class _AuthScreenState extends State<AuthScreen> {
         }
 
         if (user != null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
+          Navigator.of(context).pushReplacementNamed('/');
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
