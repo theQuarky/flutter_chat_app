@@ -10,6 +10,7 @@ import (
 	firebase "firebase.google.com/go"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -19,7 +20,6 @@ type User struct {
 	Gender    string    `firestore:"gender"`
 	Bio       string    `firestore:"bio"`
 	Location  GeoPoint  `firestore:"location"`
-	Timestamp time.Time `firestore:"timestamp"`
 }
 
 type GeoPoint struct {
@@ -53,11 +53,11 @@ func findMatches(ctx context.Context, event events.CloudWatchEvent) (string, err
 	for {
 		doc, err := iter.Next()
 		if err != nil {
-			if err == nil {
+			if err == iterator.Done {
 				log.Println("Finished iterating over matchQueue")
-			} else {
-				log.Printf("Error iterating over matchQueue: %v", err)
+				break
 			}
+			log.Printf("Error iterating over matchQueue: %v", err)
 			break
 		}
 		var user User
@@ -82,17 +82,18 @@ func findMatches(ctx context.Context, event events.CloudWatchEvent) (string, err
 
 			log.Printf("Attempting to create match between %s and %s", user1.UserID, user2.UserID)
 
-			// Create a match
+			// Create a match using server's current time
+			matchTime := time.Now()
 			_, _, err := client.Collection("matches").Add(ctx, map[string]interface{}{
 				"user1":     user1.UserID,
 				"user2":     user2.UserID,
-				"timestamp": time.Now(),
+				"timestamp": matchTime,
 			})
 			if err != nil {
 				log.Printf("Error creating match between %s and %s: %v", user1.UserID, user2.UserID, err)
 				continue
 			}
-			log.Printf("Match created successfully between %s and %s", user1.UserID, user2.UserID)
+			log.Printf("Match created successfully between %s and %s at %v", user1.UserID, user2.UserID, matchTime)
 
 			// Remove users from matchQueue
 			log.Printf("Removing %s from matchQueue", user1.UserID)

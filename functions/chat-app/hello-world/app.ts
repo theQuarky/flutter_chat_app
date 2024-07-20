@@ -13,7 +13,7 @@ interface UserData {
         latitude: number;
         longitude: number;
     };
-    timestamp: number;
+    timestamp?: number;
 }
 
 interface RequestBody {
@@ -75,7 +75,6 @@ export const addToMatchQueueHandler: APIGatewayProxyHandler = async (event) => {
             gender: userData.gender,
             bio: userData.bio,
             location: location,
-            timestamp: Date.now(),
         };
 
         console.log('Adding user to match queue');

@@ -57,17 +57,26 @@ Resources:
         Sourcemap: true
         EntryPoints:
         - app.ts
-  # FindMatchesFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     CodeUri: go-function/
-  #     Handler: main
-  #     Runtime: provided.al2023
-  #     Events:
-  #       Schedule:
-  #         Type: Schedule
-  #         Properties:
-  #           Schedule: rate(1 minute)
+  FindMatchesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: go-function/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Events:
+        MatchQueueEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - com.matchmaking.queue
+              detail-type:
+                - MatchQueueUpdate
+    Metadata:
+      BuildMethod: makefile
+      BuildProperties:
+        Makefile: Makefile
+        MakeTarget: build
 
 Outputs:
   AddToMatchQueueApi:

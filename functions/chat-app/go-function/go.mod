@@ -1,4 +1,4 @@
-module go-function
+module findmatches
 
 go 1.22.5
 
