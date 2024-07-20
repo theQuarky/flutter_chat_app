@@ -43,6 +43,8 @@ Resources:
       CodeUri: hello-world/
       Handler: app.removeFromMatchQueueHandler
       Runtime: nodejs20.x
+      Timeout: 300
+      MemorySize: 524
       Events:
         RemoveFromMatchQueue:
           Type: Api

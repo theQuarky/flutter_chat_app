@@ -106,3 +106,41 @@ export const addToMatchQueueHandler: APIGatewayProxyHandler = async (event) => {
         return { statusCode: 500, body: JSON.stringify({ message: 'Unknown server error' }) };
     }
 };
+
+export const removeFromMatchQueueHandler: APIGatewayProxyHandler = async (event) => {
+    console.log('RemoveFromMatchQueue function started');
+    if (!event.body) {
+        console.log('No event body');
+        return { statusCode: 400, body: JSON.stringify({ message: 'Invalid input' }) };
+    }
+
+    const { userId }: RequestBody = JSON.parse(event.body);
+    console.log(`Received request to remove user: ${userId}`);
+
+    const idToken = event.headers['Authorization']?.split('Bearer ')[1];
+    if (!idToken) {
+        console.log('No ID token provided');
+        return { statusCode: 401, body: JSON.stringify({ message: 'Unauthorized' }) };
+    }
+
+    try {
+        console.log('Verifying ID token');
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        if (decodedToken.uid !== userId) {
+            console.log('Token UID does not match userId');
+            return { statusCode: 403, body: JSON.stringify({ message: 'Forbidden' }) };
+        }
+
+        console.log('Removing user from match queue');
+        await db.collection('matchQueue').doc(userId).delete();
+        console.log('User removed from match queue');
+
+        return { statusCode: 200, body: JSON.stringify({ message: 'Removed from match queue' }) };
+    } catch (error) {
+        console.error('Error in removeFromMatchQueueHandler:', error);
+        if (error instanceof Error) {
+            return { statusCode: 500, body: JSON.stringify({ message: `Server error: ${error.message}` }) };
+        }
+        return { statusCode: 500, body: JSON.stringify({ message: 'Unknown server error' }) };
+    }
+};
