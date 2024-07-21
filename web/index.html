@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -27,7 +28,7 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png" />
 
   <title>chat_app</title>
   <link rel="manifest" href="manifest.json">
@@ -39,25 +40,35 @@
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 </head>
+
 <body>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js"></script>
   <script>
     var firebaseConfig = {
-      // Your web app's Firebase configuration
+      apiKey: "AIzaSyCUoIB-Ng-im33Ii9B9O49MjGkSFJsHoJw",
+      authDomain: "flutter-c91c8.firebaseapp.com",
+      databaseURL: "https://flutter-c91c8-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "flutter-c91c8",
+      storageBucket: "flutter-c91c8.appspot.com",
+      messagingSenderId: "327775764664",
+      appId: "1:327775764664:web:cd1aa01c16af8a2959344d",
+      measurementId: "G-R1WNKF94WK"
     };
     firebase.initializeApp(firebaseConfig);
-    window.addEventListener('load', function(ev) {
-      
+    window.addEventListener('load', function (ev) {
+
       // Download main.dart.js
       _flutter.loader.loadEntrypoint({
         serviceWorker: {
           serviceWorkerVersion: serviceWorkerVersion,
         },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
+        onEntrypointLoaded: function (engineInitializer) {
+          engineInitializer.initializeEngine().then(function (appRunner) {
             appRunner.runApp();
           });
         }
@@ -65,4 +76,5 @@
     });
   </script>
 </body>
+
 </html>

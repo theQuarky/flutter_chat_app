@@ -7,7 +7,9 @@ import (
 	"math/rand"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
+	"firebase.google.com/go/messaging"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"google.golang.org/api/iterator"
@@ -15,16 +17,26 @@ import (
 )
 
 type User struct {
-	UserID    string    `firestore:"userId"`
-	BirthDate time.Time `firestore:"birthDate"`
-	Gender    string    `firestore:"gender"`
-	Bio       string    `firestore:"bio"`
-	Location  GeoPoint  `firestore:"location"`
+	UserID       string    `firestore:"userId"`
+	BirthDate    time.Time `firestore:"birthDate"`
+	Gender       string    `firestore:"gender"`
+	Bio          string    `firestore:"bio"`
+	Location     GeoPoint  `firestore:"location"`
+	DeviceTokens []string  `firestore:"deviceTokens"`
 }
 
 type GeoPoint struct {
 	Latitude  float64 `firestore:"latitude"`
 	Longitude float64 `firestore:"longitude"`
+}
+
+type ChatEntry struct {
+	MatchID         string    `firestore:"matchId"`
+	Users           []string  `firestore:"users"`
+	CreatedAt       time.Time `firestore:"createdAt"`
+	LastMessage     string    `firestore:"lastMessage"`
+	LastMessageTime time.Time `firestore:"lastMessageTime"`
+	FriendRequest   []string  `firestore:"friendRequest"`
 }
 
 func findMatches(ctx context.Context, event events.CloudWatchEvent) (string, error) {
@@ -45,6 +57,13 @@ func findMatches(ctx context.Context, event events.CloudWatchEvent) (string, err
 	}
 	defer client.Close()
 	log.Println("Firestore client created successfully")
+
+	fcmClient, err := app.Messaging(ctx)
+	if err != nil {
+		log.Printf("Error getting FCM client: %v", err)
+		return "", fmt.Errorf("error getting FCM client: %v", err)
+	}
+	log.Println("FCM client created successfully")
 
 	// Get all users from matchQueue
 	log.Println("Fetching users from matchQueue")
@@ -82,13 +101,21 @@ func findMatches(ctx context.Context, event events.CloudWatchEvent) (string, err
 
 			log.Printf("Attempting to create match between %s and %s", user1.UserID, user2.UserID)
 
-			// Create a match using server's current time
+			// Create a match
 			matchTime := time.Now()
-			_, _, err := client.Collection("matches").Add(ctx, map[string]interface{}{
-				"user1":     user1.UserID,
-				"user2":     user2.UserID,
-				"timestamp": matchTime,
-			})
+			matchID := user1.UserID + "-" + user2.UserID
+
+			// Create chat entry
+			chatEntry := ChatEntry{
+				MatchID:         matchID,
+				Users:           []string{user1.UserID, user2.UserID},
+				FriendRequest:   []string{},
+				CreatedAt:       matchTime,
+				LastMessage:     "",
+				LastMessageTime: matchTime,
+			}
+			_, err = client.Collection("userChats").Doc(matchID).Set(ctx, chatEntry)
+
 			if err != nil {
 				log.Printf("Error creating match between %s and %s: %v", user1.UserID, user2.UserID, err)
 				continue
@@ -96,20 +123,19 @@ func findMatches(ctx context.Context, event events.CloudWatchEvent) (string, err
 			log.Printf("Match created successfully between %s and %s at %v", user1.UserID, user2.UserID, matchTime)
 
 			// Remove users from matchQueue
-			log.Printf("Removing %s from matchQueue", user1.UserID)
 			_, err = client.Collection("matchQueue").Doc(user1.UserID).Delete(ctx)
 			if err != nil {
 				log.Printf("Error removing %s from matchQueue: %v", user1.UserID, err)
 			}
 
-			log.Printf("Removing %s from matchQueue", user2.UserID)
 			_, err = client.Collection("matchQueue").Doc(user2.UserID).Delete(ctx)
 			if err != nil {
 				log.Printf("Error removing %s from matchQueue: %v", user2.UserID, err)
 			}
 
-			// Notify users (for demonstration, we'll just log it)
-			log.Printf("Match created and users notified: %s and %s", user1.UserID, user2.UserID)
+			// Notify users
+			notifyUser(ctx, fcmClient, client, user1.UserID, "You have a new match!")
+			notifyUser(ctx, fcmClient, client, user2.UserID, "You have a new match!")
 
 			matchesCreated++
 		}
@@ -117,6 +143,46 @@ func findMatches(ctx context.Context, event events.CloudWatchEvent) (string, err
 
 	log.Printf("Matching process completed. Created %d matches", matchesCreated)
 	return fmt.Sprintf("Matching process completed. Created %d matches", matchesCreated), nil
+}
+
+func notifyUser(ctx context.Context, fcmClient *messaging.Client, firestoreClient *firestore.Client, userID string, message string) {
+	userDoc, err := firestoreClient.Collection("users").Doc(userID).Get(ctx)
+	if err != nil {
+		log.Printf("Error fetching user data for %s: %v", userID, err)
+		return
+	}
+
+	var user User
+	if err := userDoc.DataTo(&user); err != nil {
+		log.Printf("Error parsing user data for %s: %v", userID, err)
+		return
+	}
+
+	if len(user.DeviceTokens) == 0 {
+		log.Printf("No device tokens found for user %s", userID)
+		return
+	}
+
+	for _, token := range user.DeviceTokens {
+		notification := &messaging.Message{
+			Token: token,
+			Notification: &messaging.Notification{
+				Title: "New Match!",
+				Body:  message,
+			},
+			Data: map[string]string{
+				"click_action": "FLUTTER_NOTIFICATION_CLICK",
+				"type":         "match",
+			},
+		}
+
+		response, err := fcmClient.Send(ctx, notification)
+		if err != nil {
+			log.Printf("Error sending notification to user %s (token: %s): %v", userID, token, err)
+		} else {
+			log.Printf("Successfully sent notification to user %s (token: %s): %s", userID, token, response)
+		}
+	}
 }
 
 func main() {

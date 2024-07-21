@@ -4,42 +4,45 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chat_app/screens/Profile/ProfileEditScreen.dart';
 
 class ProfileScreen extends StatefulWidget {
+  final String? userId;
+
+  ProfileScreen({Key? key, this.userId}) : super(key: key);
+
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final User? user = FirebaseAuth.instance.currentUser;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   Map<String, dynamic>? userData;
+  bool isCurrentUser = false;
 
   @override
   void initState() {
     super.initState();
+    isCurrentUser =
+        widget.userId == null || widget.userId == _auth.currentUser?.uid;
     _loadUserData();
   }
 
   Future<void> _loadUserData() async {
-    if (user != null) {
-      DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user!.uid)
-          .get();
-      setState(() {
-        userData = doc.data() as Map<String, dynamic>?;
-      });
-    }
+    String uid = widget.userId ?? _auth.currentUser!.uid;
+    DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+    setState(() {
+      userData = doc.data() as Map<String, dynamic>?;
+    });
   }
 
   void _editProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-          builder: (context) => ProfileEditScreen()),
+      MaterialPageRoute(builder: (context) => ProfileEditScreen()),
     ).then((_) => _loadUserData());
   }
 
   void _logout() async {
-    await FirebaseAuth.instance.signOut();
+    await _auth.signOut();
     Navigator.of(context).pushReplacementNamed('/auth');
   }
 
@@ -61,16 +64,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fit: BoxFit.cover,
                     ),
                   ),
-                  actions: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: _editProfile,
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.logout),
-                      onPressed: _logout,
-                    ),
-                  ],
+                  actions: isCurrentUser
+                      ? [
+                          IconButton(
+                            icon: Icon(Icons.edit),
+                            onPressed: _editProfile,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.logout),
+                            onPressed: _logout,
+                          ),
+                        ]
+                      : null,
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
@@ -84,10 +89,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 4),
-                        Text(
-                          user!.email ?? 'No Email',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
-                        ),
+                        if (isCurrentUser)
+                          Text(
+                            _auth.currentUser?.email ?? 'No Email',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
                         SizedBox(height: 16),
                         Text(
                           userData!['bio'] ?? 'No bio available',

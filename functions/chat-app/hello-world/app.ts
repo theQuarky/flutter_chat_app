@@ -74,12 +74,18 @@ export const addToMatchQueueHandler: APIGatewayProxyHandler = async (event) => {
             birthDate: userData.birthDate,
             gender: userData.gender,
             bio: userData.bio,
-            location: location,
+            timestamp: Date.now(),
         };
+
+        // Only add location if it's provided in the request
+        if (location && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
+            matchQueueData.location = location;
+        }
 
         console.log('Adding user to match queue');
         await db.collection('matchQueue').doc(userId).set(matchQueueData);
         console.log('User added to match queue');
+
         const params = {
             Entries: [
                 {
