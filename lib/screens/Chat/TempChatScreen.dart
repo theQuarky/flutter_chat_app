@@ -24,9 +24,7 @@ class TempChatScreen extends StatefulWidget {
 class _TempChatScreenState extends State<TempChatScreen> {
   final ChatService _chatService = ChatService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late Stream<DocumentSnapshot> _chatStream;
-  late Stream<DocumentSnapshot> _friendshipStream;
   String _matchedUserName = "User";
   bool _isFriend = false;
 
@@ -34,32 +32,27 @@ class _TempChatScreenState extends State<TempChatScreen> {
   void initState() {
     super.initState();
     _setupChatListener();
-    _setupFriendshipListener();
     _fetchMatchedUserName();
   }
 
   void _setupChatListener() {
-    _chatStream = _chatService.getChatStream(widget.chatId);
-  }
-
-  void _setupFriendshipListener() {
-    _friendshipStream =
-        _firestore.collection('userChats').doc(widget.chatId).snapshots();
-    _friendshipStream.listen((snapshot) {
+    _chatStream = _chatService.getTempChatStream(widget.chatId);
+    _chatStream.listen((snapshot) {
       if (snapshot.exists) {
         var data = snapshot.data() as Map<String, dynamic>?;
         if (data != null) {
-          List<String> friends = List<String>.from(data['friendRequest'] ?? []);
-          if (friends.contains(widget.matchedUserId) &&
-              friends.contains(_auth.currentUser!.uid)) {
-            _chatService.acceptMutualFriendRequest(
+          List<String> friendRequests =
+              List<String>.from(data['friendRequest'] ?? []);
+          if (friendRequests.contains(widget.matchedUserId) &&
+              friendRequests.contains(_auth.currentUser!.uid)) {
+            _chatService.moveToPermanentChat(
                 widget.chatId, _auth.currentUser!.uid, widget.matchedUserId);
             _navigateToPermanentChat();
           }
         }
       } else {
-        print('chat ended by other user');
-        _endChat();
+        print('Chat ended by other user');
+        _navigateToSearchScreen();
       }
     });
   }
@@ -85,26 +78,20 @@ class _TempChatScreenState extends State<TempChatScreen> {
 
   void _addFriend() async {
     try {
-      await _chatService.addFriend(widget.chatId, _auth.currentUser!.uid);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Friend added successfully!')));
-    } catch (e) {
+      await _chatService.addFriendRequest(
+          widget.chatId, _auth.currentUser!.uid);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding friend. Please try again.')));
+          SnackBar(content: Text('Friend request sent successfully!')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error sending friend request. Please try again.')));
     }
   }
 
-  void _endChatButton() {
-    _chatService.endChat(widget.chatId);
-    Navigator.of(context).pop();
-  }
-
-  void _endChat({bool navigateAway = false}) async {
+  void _endChat() async {
     try {
-      await _chatService.endChat(widget.chatId);
-      if (!navigateAway) {
-        _navigateToSearchScreen();
-      }
+      await _chatService.endTempChat(widget.chatId);
+      _navigateToSearchScreen();
     } catch (e) {
       print('Error ending chat: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -122,9 +109,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
-        if (didPop) {
-          return;
-        }
+        if (didPop) return;
         _endChat();
       },
       child: Scaffold(
@@ -136,7 +121,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
                 if (value == 'add_friend') {
                   _addFriend();
                 } else if (value == 'end_chat') {
-                  _endChatButton();
+                  _endChat();
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -187,7 +172,7 @@ class _TempChatScreenState extends State<TempChatScreen> {
             ),
             ChatInput(
               onSendMessage: (message) =>
-                  _chatService.sendMessage(widget.chatId, message),
+                  _chatService.sendTempMessage(widget.chatId, message),
             ),
           ],
         ),

@@ -1,57 +1,70 @@
+import 'package:chat_app/AuthScreen.dart';
+import 'package:chat_app/firebase_options.dart';
+import 'package:chat_app/screens/Home/HomeScreen.dart';
+import 'package:chat_app/screens/Profile/ProfileEditScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chat_app/services/NotificationService.dart';
-import 'screens/Home/HomeScreen.dart';
-import 'AuthScreen.dart';
-import 'firebase_options.dart';
-import 'screens/Profile/ProfileEditScreen.dart';
+import 'package:chat_app/screens/Chat/ChatScreen.dart';
+// Import other necessary files
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  try {
-    await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform);
-    await NotificationService().initialize();
-  } catch (e) {
-    print('Error initializing Firebase: $e');
-  }
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService.onNotificationTap = _handleNotificationTap;
+  }
+
+  void _handleNotificationTap(String chatId, String friendId) {
+    navigatorKey.currentState?.pushNamed(
+      '/chat',
+      arguments: {
+        'chatId': chatId,
+        'friendId': friendId,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Chat App',
-      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: AppBarTheme(
-          color: Colors.white,
-          elevation: 0,
-          iconTheme: IconThemeData(color: Colors.black),
-          titleTextStyle: TextStyle(
-              color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
       ),
       home: AuthWrapper(),
       routes: {
         '/home': (context) => HomeScreen(),
         '/auth': (context) => AuthScreen(),
         '/profile': (context) => ProfileEditScreen(),
-      },
-      onUnknownRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: Text('Route not found!'),
-            ),
-          ),
-        );
+        '/chat': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return PermanentChatScreen(
+            chatId: args['chatId'],
+            friendId: args['friendId'],
+          );
+        },
       },
     );
   }
@@ -66,6 +79,13 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return LoadingScreen();
         } else if (snapshot.hasData) {
+          // Check if there's an initial route to navigate to
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final initialRoute = ModalRoute.of(context)?.settings.name;
+            if (initialRoute != null && initialRoute != '/') {
+              Navigator.of(context).pushReplacementNamed(initialRoute);
+            }
+          });
           return ProfileCheck(userId: snapshot.data!.uid);
         } else {
           return AuthScreen();

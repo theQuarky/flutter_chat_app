@@ -1,21 +1,20 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  Stream<DocumentSnapshot> getChatStream(String chatId) {
+  // Temporary Chat Methods
+  Stream<DocumentSnapshot> getTempChatStream(String chatId) {
     return _firestore.collection('userChats').doc(chatId).snapshots();
   }
 
-  Future<String> getMatchedUserName(String userId) async {
-    DocumentSnapshot userDoc =
-        await _firestore.collection('users').doc(userId).get();
-    return userDoc.get('displayName') ?? userDoc.get('email') ?? "User";
-  }
-
-  Future<void> sendMessage(String chatId, String message) async {
+  Future<void> sendTempMessage(String chatId, String message) async {
     final messageData = {
       'senderId': _auth.currentUser!.uid,
       'text': message,
@@ -29,45 +28,91 @@ class ChatService {
     }, SetOptions(merge: true));
   }
 
-  Future<void> addFriend(String chatId, String userId) async {
-    try {
-      await _firestore.collection('userChats').doc(chatId).set({
-        'friendRequest': FieldValue.arrayUnion([userId])
-      }, SetOptions(merge: true));
-
-      print(
-          'Friend request sent successfully for user: $userId in chat: $chatId');
-    } catch (e) {
-      print('Error adding friend request: $e');
-      throw e;
-    }
+  Future<void> addFriendRequest(String chatId, String userId) async {
+    await _firestore.collection('userChats').doc(chatId).set({
+      'friendRequest': FieldValue.arrayUnion([userId])
+    }, SetOptions(merge: true));
   }
 
-  Future<void> acceptMutualFriendRequest(
+  Future<void> endTempChat(String chatId) async {
+    await _firestore.collection('userChats').doc(chatId).delete();
+  }
+
+  // Permanent Chat Methods
+  Future<void> moveToPermanentChat(
       String chatId, String currentUserId, String friendId) async {
-    try {
-      // Move the chat to the '_chat' collection
-      DocumentSnapshot tempChatDoc =
-          await _firestore.collection('userChats').doc(chatId).get();
-      Map<String, dynamic> chatData =
-          tempChatDoc.data() as Map<String, dynamic>;
+    DocumentSnapshot tempChatDoc =
+        await _firestore.collection('userChats').doc(chatId).get();
+    Map<String, dynamic> chatData = tempChatDoc.data() as Map<String, dynamic>;
 
-      await _firestore.collection('_chat').doc(chatId).set({
-        ...chatData,
-        'status': 'permanent',
-      });
+    await _firestore.collection('_chat').doc(chatId).set({
+      ...chatData,
+      'status': 'permanent',
+    });
 
-      // Delete the temporary chat
-      await _firestore.collection('userChats').doc(chatId).delete();
+    await _firestore.collection('userChats').doc(chatId).delete();
 
-      // Add friend to each user's document
-      await _addFriendToUserCollection(currentUserId, friendId, chatId);
-      await _addFriendToUserCollection(friendId, currentUserId, chatId);
+    await _addFriendToUserCollection(currentUserId, friendId, chatId);
+    await _addFriendToUserCollection(friendId, currentUserId, chatId);
+  }
 
-      print('Mutual friend request accepted for chat: $chatId');
-    } catch (e) {
-      print('Error accepting mutual friend request: $e');
-      throw e;
+  Stream<DocumentSnapshot> getPermanentChatStream(String chatId) {
+    return _firestore.collection('_chat').doc(chatId).snapshots();
+  }
+
+  Future<void> sendPermanentMessage(String chatId, String message) async {
+    final messageData = {
+      'senderId': _auth.currentUser!.uid,
+      'text': message,
+      'timestamp': Timestamp.now(),
+    };
+
+    await _firestore.collection('_chat').doc(chatId).set({
+      'messages': FieldValue.arrayUnion([messageData]),
+      'lastMessage': message,
+      'lastMessageTime': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await _updateFriendsLastMessage(chatId, message);
+  }
+
+  Future<void> sendMediaMessage(
+      String chatId, String mediaUrl, String mediaType) async {
+    final messageData = {
+      'senderId': _auth.currentUser!.uid,
+      'mediaUrl': mediaUrl,
+      'mediaType': mediaType,
+      'timestamp': Timestamp.now(),
+    };
+
+    await _firestore.collection('_chat').doc(chatId).set({
+      'messages': FieldValue.arrayUnion([messageData]),
+      'lastMessage': 'Sent a $mediaType',
+      'lastMessageTime': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await _updateFriendsLastMessage(chatId, 'Sent a $mediaType');
+  }
+
+  Future<void> _updateFriendsLastMessage(
+      String chatId, String lastMessage) async {
+    DocumentSnapshot chatDoc =
+        await _firestore.collection('_chat').doc(chatId).get();
+    List<String> users = List<String>.from(chatDoc['users']);
+
+    for (String userId in users) {
+      String friendId = users.firstWhere((id) => id != userId);
+      await _firestore.collection('users').doc(userId).set({
+        'friends': {
+          friendId: {
+            'chatId': chatId,
+            'lastMessage': lastMessage,
+            'lastMessageTime': FieldValue.serverTimestamp(),
+            'unreadCount':
+                userId == _auth.currentUser!.uid ? 0 : FieldValue.increment(1),
+          }
+        }
+      }, SetOptions(merge: true));
     }
   }
 
@@ -85,14 +130,22 @@ class ChatService {
     }, SetOptions(merge: true));
   }
 
-  Future<void> markMessagesAsRead(String chatId, String friendId) async {
-    await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
-      'friends': {
-        friendId: {
-          'unreadCount': 0,
+  Future<void> markMessagesAsRead(String friendId) async {
+    DocumentSnapshot userDoc =
+        await _firestore.collection('users').doc(_auth.currentUser!.uid).get();
+    Map<String, dynamic> friends = userDoc['friends'] ?? {};
+
+    if (friends.containsKey(friendId)) {
+      String chatId = friends[friendId]['chatId'];
+
+      await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
+        'friends': {
+          friendId: {
+            'unreadCount': 0,
+          }
         }
-      }
-    }, SetOptions(merge: true));
+      }, SetOptions(merge: true));
+    }
   }
 
   Stream<DocumentSnapshot> getUserFriends() {
@@ -105,41 +158,77 @@ class ChatService {
   Future<Map<String, dynamic>> getFriendDetails(String friendId) async {
     DocumentSnapshot friendDoc =
         await _firestore.collection('users').doc(friendId).get();
+    if (friendDoc.exists) {
+      Map<String, dynamic> friendData =
+          friendDoc.data() as Map<String, dynamic>;
+      return {
+        'displayName': friendData['displayName'] ?? 'Unknown User',
+        'photoURL': friendData['profileImageUrl'] ?? '',
+        ...friendData,
+      };
+    }
     return {
-      'displayName': friendDoc['displayName'] ?? 'Unknown User',
-      'photoURL': friendDoc['photoURL'] ?? '',
-      ...friendDoc.data() as Map<String, dynamic>,
+      'displayName': 'Deleted Profile',
+      'photoURL': '',
     };
   }
 
-  Future<void> endChat(String chatId) async {
-    await _firestore.collection('userChats').doc(chatId).delete();
+  Future<String> getMatchedUserName(String userId) async {
+    DocumentSnapshot userDoc =
+        await _firestore.collection('users').doc(userId).get();
+    return userDoc.get('displayName') ?? userDoc.get('email') ?? "User";
   }
 
-  // In ChatService.dart
-
-  Future<String> getChatId(String userId1, String userId2) async {
-    final chatDoc = await _firestore
-        .collection('chats')
-        .where('users', arrayContains: userId1)
-        .where('users', arrayContains: userId2)
-        .limit(1)
-        .get();
-
-    if (chatDoc.docs.isNotEmpty) {
-      return chatDoc.docs.first.id;
-    } else {
-      // Create a new chat document if it doesn't exist
-      final newChatDoc = await _firestore.collection('chats').add({
-        'users': [userId1, userId2],
-        'messages': [],
-      });
-      return newChatDoc.id;
-    }
+  Stream<DocumentSnapshot> getFriendDetailsStream(String friendId) {
+    return _firestore.collection('users').doc(friendId).snapshots();
   }
 
-  Future<String> getFriendName(String friendId) async {
-    final userDoc = await _firestore.collection('users').doc(friendId).get();
-    return userDoc['displayName'] ?? 'Unknown User';
+  Future<String> uploadMedia(File file, String chatId, String mediaType) async {
+    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    Reference ref = _storage.ref().child('chat_media/$chatId/$fileName');
+
+    // Create a temporary message with isUploading flag
+    String tempMessageId = await _createTempMessage(chatId, mediaType);
+
+    UploadTask uploadTask = ref.putFile(file);
+
+    uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+      // Update progress if needed
+    });
+
+    TaskSnapshot snapshot = await uploadTask;
+    String downloadUrl = await snapshot.ref.getDownloadURL();
+
+    // Update the message with the download URL and set isUploading to false
+    await _updateMessageAfterUpload(chatId, tempMessageId, downloadUrl);
+
+    return downloadUrl;
+  }
+
+  Future<String> _createTempMessage(String chatId, String mediaType) async {
+    DocumentReference messageRef = await _firestore
+        .collection('_chat')
+        .doc(chatId)
+        .collection('messages')
+        .add({
+      'senderId': _auth.currentUser!.uid,
+      'mediaType': mediaType,
+      'isUploading': true,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    return messageRef.id;
+  }
+
+  Future<void> _updateMessageAfterUpload(
+      String chatId, String messageId, String mediaUrl) async {
+    await _firestore
+        .collection('_chat')
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+      'mediaUrl': mediaUrl,
+      'isUploading': false,
+    });
   }
 }

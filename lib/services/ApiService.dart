@@ -63,4 +63,46 @@ class ApiService {
   Stream<DocumentSnapshot> listenForMatches(String userId) {
     return _firestore.collection('userChats').doc(userId).snapshots();
   }
+
+  Future<void> sendNotification({
+    required String recipientUserId,
+    required String chatId,
+    required String type,
+    String? body,
+  }) async {
+    String? idToken = await _getIdToken();
+    if (idToken == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // payload should match this interface
+    // interface NotificationData {
+    //     recipientUserId: string;
+    //     body?: string;
+    //     type: "text" | "photo" | "video" | "audio";
+    //     senderId: string;
+    //     chatId: string;
+    // }
+    final notificationData = {
+      'recipientUserId': recipientUserId,
+      'type': type,
+      'senderId': _auth.currentUser!.uid,
+      'chatId': chatId,
+      if (body != null) 'body': body,
+    };
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/sendNewMessageNotification'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Authorization': 'Bearer $idToken',
+      },
+      body: json.encode(notificationData),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to send notification: ${response.body}');
+    }
+  }
 }

@@ -59,6 +59,29 @@ Resources:
         Sourcemap: true
         EntryPoints:
         - app.ts
+  SendNewMessageNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.sendNewMessageNotificationHandler
+      Runtime: nodejs20.x
+      Timeout: 300
+      MemorySize: 524
+      Events:
+        SendNewMessageNotification:
+          Type: Api
+          Properties:
+            Path: /sendNewMessageNotification
+            Method: post
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - app.ts
+
   FindMatchesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -87,3 +110,6 @@ Outputs:
   RemoveFromMatchQueueApi:
     Description: "API Gateway endpoint URL for Remove from Match Queue function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/removeFromMatchQueue/"
+  SendNewMessageNotificationApi:
+    Description: "API Gateway endpoint URL for Sending message notification"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/sendNewMessageNotification/"
